@@ -264,12 +264,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // 7. Compressor Type Checkboxes
         const tipoCompressor = formData.get('tipo_compressor');
-        document.getElementById('chk-compressor-odontologico').textContent = tipoCompressor === 'Odontológico/Parafuso' ? '☒ Odontológico/Parafuso' : '☐ Odontológico/Parafuso';
+        document.getElementById('chk-compressor-odontologico').textContent = tipoCompressor === 'Odontológico' ? '☒ Odontológico' : '☐ Odontológico';
+        document.getElementById('chk-compressor-parafuso').textContent = tipoCompressor === 'Parafuso' ? '☒ Parafuso' : '☐ Parafuso';
         document.getElementById('chk-compressor-radial').textContent = tipoCompressor === 'Radial' ? '☒ Radial' : '☐ Radial';
         document.getElementById('chk-compressor-venturi').textContent = tipoCompressor === 'Venturi' ? '☒ Venturi' : '☐ Venturi';
 
         const compressorIds = {
-            'Odontológico/Parafuso': 'chk-compressor-odontologico',
+            'Odontológico': 'chk-compressor-odontologico',
+            'Parafuso': 'chk-compressor-parafuso',
             'Radial': 'chk-compressor-radial',
             'Venturi': 'chk-compressor-venturi'
         };
@@ -492,8 +494,6 @@ document.addEventListener('DOMContentLoaded', () => {
             inputAmostraOutro.classList.add('hidden');
             inputClienteOutro.classList.add('hidden');
             inputProdutoOutro.classList.add('hidden');
-            inputColetaOutro.classList.add('hidden');
-            inputAnaliseOutro.classList.add('hidden');
             
             localStorage.removeItem('laudo_micros_state');
             
@@ -508,14 +508,14 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('relatorio_num').value = "044.2025";
         document.getElementById('data_emissao').value = "2025-12-10";
         
-        // Cliente "Missa" isn't in Excel. Select "Outro" and fill input
+        // Cliente "SLC"
         selectCliente.value = "Outro";
         inputClienteOutro.classList.remove('hidden');
-        inputClienteOutro.value = "Missa";
+        inputClienteOutro.value = "SLC";
         
         setRadioValue('tipo_amostra', 'Multiplicado');
         setRadioValue('meio_cultura', 'BUG');
-        setRadioValue('tipo_compressor', 'Odontológico/Parafuso');
+        setRadioValue('tipo_compressor', 'Odontológico');
         
         // Produto "Tec Bug" is in database
         selectProduto.value = "Tec Bug";
@@ -525,17 +525,15 @@ document.addEventListener('DOMContentLoaded', () => {
         
         document.getElementById('lote_produto').value = "PA00240113";
         document.getElementById('lote_meio').value = "PA021035";
-        document.getElementById('temperatura').value = "-";
-        document.getElementById('ph').value = "-";
+        document.getElementById('temperatura').value = "24";
+        document.getElementById('ph').value = "5,50";
         document.getElementById('data_multiplicacao').value = "2025-12-09";
         document.getElementById('data_coleta').value = "2025-12-10";
         
-        // Responsável Coleta: "Hebert Ribeiro" is not in Excel list ("Hebert" is). Choose Outro
-        selectColeta.value = "Outro";
-        inputColetaOutro.classList.remove('hidden');
-        inputColetaOutro.value = "Hebert Ribeiro";
+        // Responsável Coleta
+        document.getElementById('responsavel_coleta').value = "Hebert Ribeiro";
         
-        document.getElementById('observacoes').value = "Por meio da análise qualitativa por microscopia, foi possível verificar que o processo de multiplicação resultou alta concentração do microrganismo de interesse, e apresentou baixíssima detecção de outros microrganismos. Tanque 03";
+        document.getElementById('observacoes').value = "Por meio da análise qualitativa por microscopia, foi possível verificar que o processo de multiplicação resultou alta concentração do microrganismo de interesse, e apresentou baixíssima detecção de outros microrganismos";
         
         document.getElementById('data_recebimento').value = "2025-12-10";
         document.getElementById('data_analise').value = "2025-12-10";
@@ -544,12 +542,10 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('temp_incubacao').value = "NA";
         document.getElementById('tempo_incubacao').value = "NA";
         setRadioValue('choque_termico', 'NÃO');
-        document.getElementById('coloracao_gram').value = "Bastonetes gram-negativo, cocos gram-positivo";
+        document.getElementById('coloracao_gram').value = "Bastonetes gram negativa";
         
-        // Responsável Análise: "Hebert Ribeiro". Choose Outro
-        selectAnalise.value = "Outro";
-        inputAnaliseOutro.classList.remove('hidden');
-        inputAnaliseOutro.value = "Hebert Ribeiro";
+        // Responsável Análise
+        document.getElementById('responsavel_analise').value = "Hebert Ribeiro";
         
         setRadioValue('resultado_qualitativo', 'EXCELENTE');
         setRadioValue('outros_microrganismos', 'PRESENTE');
@@ -595,8 +591,8 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('diluicoes').value = "NA";
         document.getElementById('temp_incubacao').value = "NA";
         document.getElementById('tempo_incubacao').value = "NA";
-        selectColeta.value = "Hebert";
-        selectAnalise.value = "Hebert";
+        document.getElementById('responsavel_coleta').value = "Hebert";
+        document.getElementById('responsavel_analise').value = "Hebert";
     }
 
     // ----------------------------------------------------
