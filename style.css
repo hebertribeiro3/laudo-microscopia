@@ -1,0 +1,933 @@
+/* Variables & Reset */
+:root {
+    /* Brand Colors */
+    --solubio-dark: #003e15;
+    --solubio-light: #4caa48;
+    --solubio-lime: #a5ea2d;
+    --solubio-orange: #e25b26;
+    --solubio-orange-hover: #b84317;
+    
+    /* App UI Colors */
+    --bg-app: #f1f5f9;
+    --bg-sidebar: #ffffff;
+    --text-primary: #0f172a;
+    --text-secondary: #475569;
+    --text-muted: #94a3b8;
+    --border-color: #e2e8f0;
+    --accent: var(--solubio-orange);
+    
+    /* System Colors */
+    --success: #10b981;
+    --danger: #ef4444;
+    --warning: #f59e0b;
+    --info: #06b6d4;
+    
+    /* Layout Sizes */
+    --sidebar-width: 440px;
+    --sheet-width: 794px; /* A4 width at 96dpi */
+    --sheet-height: 1123px; /* A4 height at 96dpi */
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background-color: var(--bg-app);
+    color: var(--text-primary);
+    min-height: 100vh;
+    display: flex;
+    overflow: hidden;
+    -webkit-font-smoothing: antialiased;
+}
+
+/* App Layout */
+.app-container {
+    display: flex;
+    width: 100vw;
+    height: 100vh;
+}
+
+/* Sidebar Styling */
+.sidebar {
+    width: var(--sidebar-width);
+    background-color: var(--bg-sidebar);
+    border-right: 1px solid var(--border-color);
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    z-index: 10;
+    box-shadow: 4px 0 24px rgba(15, 23, 42, 0.04);
+    flex-shrink: 0;
+}
+
+.sidebar-header {
+    padding: 24px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.logo-area {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.app-logo-img {
+    height: 38px;
+    object-fit: contain;
+}
+
+.badge {
+    background: linear-gradient(135deg, var(--solubio-orange), #ff7a45);
+    color: white;
+    font-size: 10px;
+    font-weight: 800;
+    padding: 4px 8px;
+    border-radius: 999px;
+    letter-spacing: 1px;
+}
+
+.sidebar-header h1 {
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--solubio-dark);
+    margin-bottom: 6px;
+}
+
+.sidebar-header p {
+    font-size: 13px;
+    color: var(--text-secondary);
+}
+
+.actions-quick {
+    display: flex;
+    gap: 12px;
+    padding: 16px 24px;
+    border-bottom: 1px solid var(--border-color);
+    background-color: #fafbfc;
+}
+
+/* Forms styling */
+.laudo-form {
+    flex: 1;
+    min-height: 0; /* Evita que o container flex se expanda além do tamanho da tela */
+    overflow-y: auto;
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+.form-section {
+    background-color: #ffffff;
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 20px;
+    transition: all 0.25s ease;
+}
+
+.form-section:hover, .form-section:focus-within {
+    border-color: var(--solubio-light);
+    box-shadow: 0 4px 16px rgba(76, 170, 72, 0.05);
+}
+
+.section-title {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--solubio-dark);
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    border-bottom: 2px solid #f1f5f9;
+    padding-bottom: 8px;
+}
+
+.section-title i {
+    color: var(--solubio-light);
+}
+
+.form-grid {
+    display: grid;
+    grid-template-columns: repeat(12, 1fr);
+    gap: 16px 12px;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.col-12 { grid-column: span 12; }
+.col-6 { grid-column: span 6; }
+.col-4 { grid-column: span 4; }
+
+label {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    display: flex;
+    align-items: center;
+}
+
+input[type="text"],
+input[type="date"],
+textarea,
+select {
+    font-family: inherit;
+    font-size: 13px;
+    padding: 10px 12px;
+    border: 1.5px solid var(--border-color);
+    border-radius: 8px;
+    color: var(--text-primary);
+    background-color: #f8fafc;
+    transition: all 0.2s ease;
+    outline: none;
+}
+
+input[type="text"]::placeholder,
+textarea::placeholder {
+    color: var(--text-muted);
+}
+
+input[type="text"]:focus,
+input[type="date"]:focus,
+textarea:focus {
+    border-color: var(--solubio-light);
+    background-color: #ffffff;
+    box-shadow: 0 0 0 3px rgba(76, 170, 72, 0.1);
+}
+
+textarea {
+    resize: vertical;
+}
+
+/* Radio Group as Tiles */
+.radio-group-tile {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+}
+
+.tile-option {
+    cursor: pointer;
+    position: relative;
+    width: auto;
+    flex: 0 0 auto;
+}
+
+.tile-option input {
+    position: absolute;
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.tile-option span {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 6px 8px;
+    background-color: #f8fafc;
+    border: 1.5px solid var(--border-color);
+    border-radius: 6px;
+    font-size: 10.5px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    transition: all 0.2s ease;
+    user-select: none;
+    white-space: nowrap;
+    height: 100%;
+}
+
+.tile-option input:checked + span {
+    border-color: var(--solubio-light);
+    background-color: rgba(76, 170, 72, 0.08);
+    color: var(--solubio-dark);
+}
+
+.tile-option input:focus + span {
+    box-shadow: 0 0 0 2px rgba(76, 170, 72, 0.15);
+}
+
+/* Results Selection Styles */
+.results-selector .tile-option {
+    min-width: 75px;
+}
+
+.results-selector .option-excellent input:checked + span {
+    background-color: rgba(16, 185, 129, 0.1);
+    border-color: #10b981;
+    color: #065f46;
+}
+.results-selector .option-good input:checked + span {
+    background-color: rgba(2, 132, 199, 0.1);
+    border-color: #0284c7;
+    color: #0369a1;
+}
+.results-selector .option-bad input:checked + span {
+    background-color: rgba(249, 115, 22, 0.1);
+    border-color: #f97316;
+    color: #c2410c;
+}
+
+/* File Upload Styles */
+.upload-area {
+    border: 2px dashed var(--border-color);
+    border-radius: 8px;
+    padding: 16px;
+    text-align: center;
+    background-color: #f8fafc;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    position: relative;
+}
+
+.upload-area:hover {
+    border-color: var(--solubio-light);
+    background-color: rgba(76, 170, 72, 0.02);
+}
+
+.upload-area.dragover {
+    border-color: var(--solubio-orange);
+    background-color: rgba(226, 91, 38, 0.05);
+}
+
+.file-input {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    cursor: pointer;
+}
+
+.upload-placeholder i {
+    font-size: 24px;
+    color: var(--text-muted);
+    margin-bottom: 8px;
+    transition: all 0.2s ease;
+}
+
+.upload-area:hover .upload-placeholder i {
+    color: var(--solubio-light);
+    transform: translateY(-2px);
+}
+
+.upload-placeholder p {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    margin-bottom: 4px;
+}
+
+.upload-placeholder .file-name {
+    font-size: 10px;
+    color: var(--text-muted);
+    display: block;
+    word-break: break-all;
+}
+
+/* Buttons */
+.btn-primary {
+    background-color: var(--solubio-orange);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 12px 24px;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    box-shadow: 0 4px 12px rgba(226, 91, 38, 0.2);
+}
+
+.btn-primary:hover {
+    background-color: var(--solubio-orange-hover);
+    transform: translateY(-1px);
+    box-shadow: 0 6px 16px rgba(226, 91, 38, 0.3);
+}
+
+.btn-primary:active {
+    transform: translateY(0);
+}
+
+.btn-secondary {
+    background-color: #ffffff;
+    color: var(--solubio-dark);
+    border: 1.5px solid var(--border-color);
+    border-radius: 8px;
+    padding: 8px 16px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+}
+
+.btn-secondary:hover {
+    border-color: var(--solubio-light);
+    background-color: rgba(76, 170, 72, 0.05);
+}
+
+.btn-danger-outline {
+    background-color: transparent;
+    color: var(--danger);
+    border: 1.5px solid rgba(239, 68, 68, 0.3);
+    border-radius: 8px;
+    padding: 8px 16px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+}
+
+.btn-danger-outline:hover {
+    background-color: rgba(239, 68, 68, 0.05);
+    border-color: var(--danger);
+}
+
+.btn-block {
+    width: 100%;
+}
+
+.btn-lg {
+    padding: 16px 28px;
+    font-size: 15px;
+}
+
+.sidebar-footer {
+    padding: 12px 24px;
+    border-top: 1px solid var(--border-color);
+    background-color: #ffffff;
+}
+
+.sidebar-footer .btn-lg {
+    padding: 12px 24px; /* Altura menor para não esconder opções de cima */
+}
+
+/* Main Preview Styling */
+.preview-area {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    overflow: hidden;
+}
+
+.preview-toolbar {
+    background-color: #ffffff;
+    border-bottom: 1px solid var(--border-color);
+    padding: 14px 24px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    z-index: 5;
+    box-shadow: 0 2px 10px rgba(15, 23, 42, 0.02);
+}
+
+.preview-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text-secondary);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.pulse-icon {
+    width: 8px;
+    height: 8px;
+    background-color: var(--success);
+    border-radius: 999px;
+    position: relative;
+}
+
+.pulse-icon::after {
+    content: '';
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    background-color: var(--success);
+    border-radius: 999px;
+    animation: pulse 1.8s infinite ease-in-out;
+}
+
+@keyframes pulse {
+    0% { transform: scale(1); opacity: 0.8; }
+    100% { transform: scale(2.5); opacity: 0; }
+}
+
+.preview-zoom {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.preview-zoom button {
+    background-color: #f1f5f9;
+    border: none;
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.preview-zoom button:hover {
+    background-color: #e2e8f0;
+    color: var(--text-primary);
+}
+
+.preview-zoom span {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text-secondary);
+    min-width: 36px;
+    text-align: center;
+}
+
+.laudo-sheet-wrapper {
+    flex: 1;
+    overflow: auto;
+    padding: 30px;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    background-color: var(--bg-app);
+}
+
+/* Laudo Sheet Dimensions for A4 */
+.laudo-sheet {
+    width: var(--sheet-width);
+    height: var(--sheet-height);
+    background-color: #ffffff;
+    box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
+    display: flex;
+    flex-direction: column;
+    padding: 18px 25px;
+    box-sizing: border-box;
+    transform-origin: top center;
+    position: relative;
+    font-family: Calibri, Arial, sans-serif; /* Excel/Word exact match */
+}
+
+/* Report Element Styling */
+.laudo-header-banner {
+    width: 100%;
+    margin-bottom: 8px;
+    overflow: hidden;
+    flex-shrink: 0; /* Impede encolhimento no flexbox */
+}
+
+.header-banner-img {
+    width: 100%;
+    height: auto;
+    display: block;
+}
+
+/* Meta Info */
+.meta-section {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 12px;
+    padding: 4px 10px;
+    background-color: #f8fafc;
+    border-bottom: 2px solid var(--solubio-dark);
+}
+
+.meta-item {
+    font-size: 11px;
+}
+
+.meta-label {
+    font-weight: bold;
+    color: var(--solubio-dark);
+}
+
+.meta-val {
+    color: var(--text-primary);
+    margin-left: 4px;
+    font-weight: 600;
+}
+
+/* Report Sections */
+.report-section {
+    margin-bottom: 7px;
+    display: flex;
+    flex-direction: column;
+}
+
+.report-section-header {
+    background-color: var(--solubio-dark);
+    color: #ffffff;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 5px 10px;
+    letter-spacing: 0.8px;
+    border-radius: 0;
+    margin-bottom: 4px;
+}
+
+/* Tables in Report */
+.report-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 11px;
+}
+
+.report-table td {
+    border: 1px solid #000000; /* Fiel ao Word */
+    padding: 3.5px 6px;
+    vertical-align: middle;
+}
+
+.label-td {
+    font-weight: bold;
+    color: #000000;
+    background-color: #f2f2f2; /* Cinza claro oficial */
+}
+
+.val-td {
+    color: #000000;
+    background-color: #ffffff;
+}
+
+/* Checkbox representation in report */
+.checkbox-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 2px 14px;
+}
+
+.checkbox-item {
+    white-space: nowrap;
+    color: #475569;
+    font-weight: 500;
+}
+
+
+/* Active checked states visual highlight in report text if matched */
+.checked-val {
+    color: #000000;
+    font-weight: bold;
+}
+
+/* Results section tables */
+.results-table {
+    text-align: center;
+    font-size: 11px;
+}
+
+.results-table th {
+    background-color: #f2f2f2;
+    color: #000000;
+    font-weight: bold;
+    border: 1px solid #000000;
+    padding: 6px;
+    font-size: 10.5px;
+}
+
+.results-table td {
+    padding: 8px;
+    font-weight: 800;
+    font-size: 14px;
+}
+
+.result-value {
+    letter-spacing: 0.5px;
+}
+
+/* Color codes for results table cell output */
+.result-excelente {
+    color: #10b981; /* Green */
+}
+.result-padrao, .result-padrão {
+    color: #0284c7; /* Blue (Padrão) */
+}
+.result-atencao, .result-atenção {
+    color: #f97316; /* Orange (Atenção) */
+}
+.result-presente {
+    color: #ef4444; /* Red warning */
+}
+.result-ausente {
+    color: #10b981; /* Green safe */
+}
+
+/* Photos Container */
+.photos-container {
+    display: flex;
+    gap: 15px;
+    margin-top: 2px;
+}
+
+.photo-box {
+    flex: 1;
+    border: 1px solid #000000;
+    display: flex;
+    flex-direction: column;
+}
+
+.photo-title {
+    background-color: #f2f2f2;
+    border-bottom: 1px solid #000000;
+    color: #000000;
+    font-size: 9.5px;
+    font-weight: 700;
+    text-align: center;
+    padding: 4px;
+    letter-spacing: 0.5px;
+}
+
+.photo-wrapper {
+    flex: 1;
+    height: 185px; /* Altura menor para caber tudo em 1 folha A4 */
+    background-color: #fafbfc;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    overflow: hidden;
+}
+
+.photo-wrapper img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover; /* Crop to fit cleanly */
+}
+
+.photo-placeholder {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+.photo-placeholder span {
+    font-size: 10px;
+    color: var(--text-muted);
+}
+
+/* Footer of Laudo */
+.laudo-footer {
+    margin-top: auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding-top: 6px;
+    flex-shrink: 0; /* Impede encolhimento no flexbox */
+}
+
+.footer-divider {
+    width: 100%;
+    height: 1px;
+    background-color: #c8d3cc;
+    margin-bottom: 6px;
+}
+
+.footer-text {
+    font-size: 9.5px;
+    color: #64748b;
+    font-weight: 600;
+}
+
+/* Helpers */
+.hidden {
+    display: none !important;
+}
+
+.mt-2 {
+    margin-top: 8px;
+}
+
+/* Flex grow helper to push footer to bottom in A4 */
+.flex-grow {
+    flex-grow: 1;
+}
+
+/* Responsividade (Desktop / Tablets) */
+@media (max-width: 992px) {
+    .app-container {
+        flex-direction: column;
+        overflow-y: auto;
+        height: auto;
+    }
+    
+    .sidebar {
+        width: 100%;
+        height: auto;
+        border-right: none;
+        border-bottom: 1px solid var(--border-color);
+    }
+    
+    .preview-area {
+        height: auto;
+        min-height: 100vh;
+    }
+    
+    .laudo-sheet-wrapper {
+        padding: 16px;
+    }
+}
+
+/* PRINT RULES */
+@media print {
+    @page {
+        size: A4 portrait;
+        margin: 0mm; /* Zera margens do navegador para controle total pelo CSS */
+    }
+
+    /* Hide UI controls */
+    .no-print,
+    .sidebar,
+    .preview-toolbar,
+    #zoom-out,
+    #zoom-in,
+    #zoom-level {
+        display: none !important;
+    }
+    
+    /* Reset body and container */
+    body, html {
+        background-color: #ffffff !important;
+        color: #000000 !important;
+        width: 210mm !important;
+        height: 297mm !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        overflow: hidden !important; /* Prevent extra blank page */
+        display: block !important;
+    }
+    
+    .app-container {
+        display: block !important;
+        position: absolute !important;
+        left: 0 !important;
+        top: 0 !important;
+        width: 210mm !important;
+        height: 297mm !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        overflow: hidden !important;
+    }
+    
+    .preview-area {
+        display: block !important;
+        position: absolute !important;
+        left: 0 !important;
+        top: 0 !important;
+        width: 210mm !important;
+        height: 297mm !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        overflow: hidden !important;
+    }
+    
+    .laudo-sheet-wrapper {
+        display: block !important;
+        position: absolute !important;
+        left: 0 !important;
+        top: 0 !important;
+        width: 210mm !important;
+        height: 297mm !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        background-color: transparent !important;
+        overflow: hidden !important;
+    }
+    
+    /* Force specific A4 sheet size to remove shadows & margins */
+    .laudo-sheet {
+        position: absolute !important;
+        left: 0 !important;
+        top: 0 !important;
+        box-shadow: none !important;
+        margin: 0 !important;
+        padding: 8mm 12mm !important; /* Margem interna ideal para impressão */
+        width: 210mm !important;
+        height: 297mm !important;
+        max-height: 297mm !important;
+        max-width: 210mm !important;
+        box-sizing: border-box !important;
+        overflow: hidden !important; /* Force fit */
+        page-break-after: avoid !important;
+        page-break-before: avoid !important;
+        page-break-inside: avoid !important;
+        transform: scale(1) !important;
+    }
+    
+    /* Fix backgrounds in print */
+    * {
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+    }
+    
+    .laudo-header-banner {
+        background-color: transparent !important;
+        background-image: none !important;
+        width: 100% !important;
+        height: auto !important;
+        margin-bottom: 5px !important; /* Mais compacto */
+        overflow: hidden !important;
+        display: block !important;
+        flex-shrink: 0 !important;
+    }
+
+    .header-banner-img {
+        width: 100% !important;
+        height: auto !important;
+        max-height: none !important;
+        display: block !important;
+    }
+    
+    /* Compactar tabelas na impressão para economizar espaço para o rodapé */
+    .report-section {
+        margin-bottom: 5px !important;
+    }
+    
+    .report-table td {
+        padding: 3px 5px !important;
+        font-size: 11px !important;
+        line-height: 1.15 !important;
+    }
+    
+    .photo-wrapper {
+        height: 130px !important; /* Reduz de 138px para 130px na impressão para garantir encaixe sem cortes */
+    }
+    
+    .laudo-footer {
+        padding-top: 4px !important;
+        flex-shrink: 0 !important;
+    }
+    
+    .label-td {
+        background-color: #f2f2f2 !important;
+    }
+    
+    .results-table th {
+        background-color: #f2f2f2 !important;
+    }
+}
