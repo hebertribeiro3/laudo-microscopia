@@ -1266,7 +1266,37 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Form First Client Welcome Submit
+    // Dynamic Row Adder for Welcome Modal (Adicionar Mais Fazendas)
+    let welcomeClientCounter = 1;
+    const btnAddMoreWelcome = document.getElementById('btn-add-more-welcome-clients');
+    if (btnAddMoreWelcome) {
+        btnAddMoreWelcome.addEventListener('click', () => {
+            welcomeClientCounter++;
+            const container = document.getElementById('welcome-clients-list');
+            if (!container) return;
+
+            const row = document.createElement('div');
+            row.className = 'form-group welcome-client-row';
+            row.innerHTML = `
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 4px;">
+                    <label style="font-size: 11px; font-weight: 700; color: var(--text-secondary);">CLIENTE / FAZENDA ${welcomeClientCounter}</label>
+                    <button type="button" class="btn-remove-welcome-row" style="background: none; border: none; color: #ef4444; font-size: 11px; cursor: pointer; padding: 2px 4px; font-weight: 600;" title="Remover esta linha">
+                        <i class="fa-solid fa-trash-can"></i> Remover
+                    </button>
+                </div>
+                <input type="text" class="form-control welcome-client-input" placeholder="Ex: Nome do Cliente - Nome da Fazenda" required>
+            `;
+
+            row.querySelector('.btn-remove-welcome-row')?.addEventListener('click', () => {
+                row.remove();
+            });
+
+            container.appendChild(row);
+            row.querySelector('input')?.focus();
+        });
+    }
+
+    // Form First Client Welcome Submit (Salvar 1 ou múltiplos clientes)
     const formFirstClient = document.getElementById('form-first-client');
     if (formFirstClient) {
         formFirstClient.addEventListener('submit', async (e) => {
@@ -1274,25 +1304,38 @@ document.addEventListener('DOMContentLoaded', () => {
             const user = AuthManager.getCurrentUser();
             if (!user) return;
 
-            const name = document.getElementById('first-client-name').value.trim();
-            const clientRecord = {
-                id: 'cli_' + Date.now(),
-                userId: user.id,
-                name: name
-            };
+            const inputs = document.querySelectorAll('.welcome-client-input');
+            const savedNames = [];
 
-            await LaudoDB.saveClient(clientRecord);
-            closeModal('modal-client-welcome');
-            await populateClientDropdown();
-            
-            // Select the newly added client in the form
-            const selectClient = document.getElementById('cliente_fazenda');
-            if (selectClient) {
-                selectClient.value = name;
-                selectClient.dispatchEvent(new Event('change'));
+            for (let i = 0; i < inputs.length; i++) {
+                const name = inputs[i].value.trim();
+                if (name) {
+                    const clientRecord = {
+                        id: 'cli_' + Date.now() + '_' + i,
+                        userId: user.id,
+                        name: name
+                    };
+                    await LaudoDB.saveClient(clientRecord);
+                    savedNames.push(name);
+                }
             }
 
-            showToast(`Cliente "${name}" cadastrado com sucesso! Agora você já pode gerar seus laudos.`, 'success');
+            closeModal('modal-client-welcome');
+            await populateClientDropdown();
+
+            if (savedNames.length > 0) {
+                const selectClient = document.getElementById('cliente_fazenda');
+                if (selectClient) {
+                    selectClient.value = savedNames[0];
+                    selectClient.dispatchEvent(new Event('change'));
+                }
+            }
+
+            if (savedNames.length === 1) {
+                showToast(`Cliente "${savedNames[0]}" cadastrado com sucesso!`, 'success');
+            } else if (savedNames.length > 1) {
+                showToast(`${savedNames.length} Clientes/Fazendas cadastrados com sucesso!`, 'success');
+            }
         });
     }
 

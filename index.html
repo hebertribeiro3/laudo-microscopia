@@ -1023,7 +1023,7 @@
         </div>
     </div>
 
-    <!-- MODAL 6: PRIMEIRA BOAS-VINDAS / CADASTRAR PRIMEIRO CLIENTE -->
+    <!-- MODAL 6: PRIMEIRA BOAS-VINDAS / CADASTRAR CLIENTES E FAZENDAS -->
     <div class="modal-overlay" id="modal-client-welcome">
         <div class="modal-card">
             <div class="modal-header">
@@ -1038,13 +1038,21 @@
                         <span style="font-size: 32px;">👋</span>
                         <h3 style="font-size: 16px; margin-top: 6px; color: var(--solubio-dark);">Bem-vindo ao Sistema de Laudos!</h3>
                         <p style="font-size: 12px; color: var(--text-secondary); margin-top: 4px;">
-                            Cadastre o seu <strong>primeiro Cliente / Fazenda</strong> para começar a gerar e organizar seus laudos.
+                            Cadastre seus <strong>Clientes e Fazendas</strong> para começar a gerar seus laudos. Você pode cadastrar um ou múltiplos clientes agora.
                         </p>
                     </div>
 
-                    <div class="form-group mb-3">
-                        <label for="first-client-name">Nome do Cliente e Fazenda</label>
-                        <input type="text" id="first-client-name" class="form-control" placeholder="Ex: Marcos Souza - Fazenda Boa Vista" required>
+                    <div id="welcome-clients-list" style="display: flex; flex-direction: column; gap: 10px;">
+                        <div class="form-group welcome-client-row">
+                            <label style="font-size: 11px; font-weight: 700; color: var(--text-secondary);">CLIENTE / FAZENDA 1</label>
+                            <input type="text" class="form-control welcome-client-input" placeholder="Ex: Marcos Souza - Fazenda Boa Vista" required>
+                        </div>
+                    </div>
+
+                    <div style="margin-top: 14px;">
+                        <button type="button" id="btn-add-more-welcome-clients" class="btn-secondary" style="width: 100%; border: 1px dashed var(--solubio-dark); color: var(--solubio-dark); font-weight: 700; background: #f0fdf4; padding: 9px;">
+                            <i class="fa-solid fa-plus-circle"></i> Adicionar Mais uma Fazenda / Cliente
+                        </button>
                     </div>
                 </div>
                 <div class="modal-footer">
