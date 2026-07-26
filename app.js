@@ -1077,21 +1077,20 @@ document.addEventListener('DOMContentLoaded', () => {
             `;
         }
 
-        actionButtonsHTML += `
-            <button type="button" class="user-action-btn btn-logout" id="btn-logout-bar" title="Sair / Trocar Usuário">
-                <i class="fa-solid fa-right-from-bracket"></i>
-            </button>
-        `;
-
         bar.innerHTML = `
-            <div class="user-info">
-                <div class="user-avatar">${firstLetter}</div>
-                <div class="user-details">
-                    <span class="user-name" title="${user.name}">${user.name}</span>
-                    <span class="user-role-badge ${roleBadgeClass}">
-                        <i class="fa-solid ${roleIcon}"></i> ${roleLabel}
-                    </span>
+            <div class="user-top-row">
+                <div class="user-info">
+                    <div class="user-avatar">${firstLetter}</div>
+                    <div class="user-details">
+                        <span class="user-name" title="${user.name}">${user.name}</span>
+                        <span class="user-role-badge ${roleBadgeClass}">
+                            <i class="fa-solid ${roleIcon}"></i> ${roleLabel}
+                        </span>
+                    </div>
                 </div>
+                <button type="button" class="user-action-btn btn-logout" id="btn-logout-bar" title="Sair / Trocar Usuário">
+                    <i class="fa-solid fa-right-from-bracket"></i> Sair
+                </button>
             </div>
             <div class="user-actions">
                 ${actionButtonsHTML}
