@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex, nofollow, noarchive, nosnippet">
     <title>Gerador de Laudo de Microscopia - Solubio On Farm</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -128,14 +129,22 @@
         
         <!-- Sidebar / Form Panel -->
         <aside class="sidebar no-print">
+            <!-- User Session Bar -->
+            <div class="user-session-bar" id="user-session-bar">
+                <!-- Rendered dynamically by JS -->
+            </div>
+
             <div class="sidebar-header">
                 <h1>Gerador de Laudos</h1>
                 <p>Preencha os dados abaixo para atualizar o laudo em tempo real.</p>
             </div>
             
             <div class="actions-quick">
+                <button type="button" id="btn-save-laudo" class="btn-save-laudo">
+                    <i class="fa-solid fa-floppy-disk"></i> Salvar Laudo
+                </button>
                 <button type="button" id="btn-load-demo" class="btn-secondary">
-                    <i class="fa-solid fa-wand-magic-sparkles"></i> Dados de Exemplo
+                    <i class="fa-solid fa-wand-magic-sparkles"></i> Exemplo
                 </button>
                 <button type="button" id="btn-reset" class="btn-danger-outline">
                     <i class="fa-solid fa-trash-can"></i> Limpar
@@ -683,7 +692,415 @@
 
     </div>
 
-    <!-- Script principal -->
-    <script src="app.js?v=7"></script>
+    <!-- MODAL 1: LOGIN E SELEÇÃO DE PERFIL DE ACESSO -->
+    <div class="modal-overlay" id="modal-login">
+        <div class="modal-card">
+            <div class="modal-header">
+                <div class="modal-title">
+                    <i class="fa-solid fa-shield-halved"></i> Solubio On Farm - Autenticação
+                </div>
+            </div>
+            
+            <!-- Auth Toggle Tabs -->
+            <div style="display: flex; background: #f1f5f9; border-bottom: 1px solid var(--border-color);">
+                <button type="button" id="tab-login-btn" class="auth-tab active" style="flex: 1; padding: 10px; border: none; background: transparent; font-weight: 700; font-size: 12px; cursor: pointer; color: var(--solubio-dark); border-bottom: 2px solid var(--solubio-dark);">
+                    <i class="fa-solid fa-right-to-bracket"></i> Entrar
+                </button>
+                <button type="button" id="tab-register-btn" class="auth-tab" style="flex: 1; padding: 10px; border: none; background: transparent; font-weight: 700; font-size: 12px; cursor: pointer; color: var(--text-secondary);">
+                    <i class="fa-solid fa-user-plus"></i> Cadastrar Consultor
+                </button>
+            </div>
+
+            <!-- Login Form -->
+            <form id="form-login">
+                <!-- Campo Armadilha (Honeypot Anti-Robô) -->
+                <input type="text" name="website_url_hp" id="login-hp" style="display:none !important; visibility:hidden !important; position:absolute !important; left:-9999px !important;" tabindex="-1" autocomplete="off">
+
+                <div class="modal-body">
+                    <div style="text-align: center; margin-bottom: 14px;">
+                        <img src="banner-header.png" style="max-height: 40px; width: auto;" alt="Solubio">
+                        <h3 style="font-size: 15px; margin-top: 6px; color: var(--solubio-dark);">Acesso ao Sistema de Laudos</h3>
+                        <div style="display: inline-flex; align-items: center; gap: 4px; font-size: 10px; color: #047857; background: #ecfdf5; padding: 3px 8px; border-radius: 12px; margin-top: 4px; border: 1px solid #a7f3d0;">
+                            <i class="fa-solid fa-shield-halved"></i> Sistema Blindado contra Robôs & Força Bruta
+                        </div>
+                    </div>
+
+                    <div class="form-group mb-2">
+                        <label for="login-email">E-mail de Acesso</label>
+                        <input type="email" id="login-email" class="form-control" placeholder="hebert.souza@solubio.agr.br" required>
+                    </div>
+
+                    <div class="form-group mb-2">
+                        <label for="login-password">Senha</label>
+                        <input type="password" id="login-password" class="form-control" placeholder="••••••••" required>
+                    </div>
+
+                    <!-- DESAFIO CAPTCHA ANTI-ROBÔ -->
+                    <div class="captcha-box mb-3" style="padding: 10px 12px; background: #f8fafc; border-radius: 8px; border: 1px solid var(--border-color);">
+                        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
+                            <label for="captcha-login-answer" style="font-size: 11px; font-weight: 700; color: var(--solubio-dark); margin: 0; display: flex; align-items: center; gap: 6px;">
+                                <i class="fa-solid fa-robot" style="color: #e25b26;"></i> Validação Humana: quanto é <span id="captcha-login-question" style="font-size: 13px; font-weight: 800; color: #003e15; background: #e2e8f0; padding: 2px 6px; border-radius: 4px;">?</span>
+                            </label>
+                            <button type="button" id="btn-refresh-captcha-login" class="btn-icon" title="Trocar Desafio" style="background: none; border: none; cursor: pointer; color: var(--text-secondary); font-size: 12px;">
+                                <i class="fa-solid fa-rotate-right"></i>
+                            </button>
+                        </div>
+                        <input type="number" id="captcha-login-answer" class="form-control" placeholder="Digite o resultado" required style="padding: 6px 10px; font-size: 12px;">
+                    </div>
+
+                    <!-- Botões de Acesso Rápido de Demonstração -->
+                    <div class="demo-access-box">
+                        <div class="demo-access-title">
+                            <i class="fa-solid fa-bolt"></i> Atalho de Acesso Rápido (Demonstração)
+                        </div>
+                        <div class="demo-access-grid">
+                            <button type="button" class="btn-demo-user demo-admin" data-email="hebert.souza@solubio.agr.br">
+                                <span style="font-size: 16px;">👑</span>
+                                <span>Nível 1 (Admin)</span>
+                                <span style="font-size: 8.5px; opacity: 0.85;">Hebert Souza</span>
+                            </button>
+                            <button type="button" class="btn-demo-user demo-coord" data-email="bruna.carneiro@solubio.agr.br">
+                                <span style="font-size: 16px;">👔</span>
+                                <span>Nível 2 (Coord.)</span>
+                                <span style="font-size: 8.5px; opacity: 0.85;">Bruna Carneiro</span>
+                            </button>
+                            <button type="button" class="btn-demo-user demo-cons" data-email="joao.consultor@solubio.agr.br">
+                                <span style="font-size: 16px;">🔬</span>
+                                <span>Nível 3 (Consultor)</span>
+                                <span style="font-size: 8.5px; opacity: 0.85;">João Silva</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="submit" class="btn-primary btn-block btn-lg">
+                        <i class="fa-solid fa-right-to-bracket"></i> Entrar no Sistema
+                    </button>
+                </div>
+            </form>
+
+            <!-- Auto-Cadastro de Consultores Form -->
+            <form id="form-register-consultant" class="hidden">
+                <!-- Campo Armadilha (Honeypot Anti-Robô) -->
+                <input type="text" name="website_url_hp" id="reg-hp" style="display:none !important; visibility:hidden !important; position:absolute !important; left:-9999px !important;" tabindex="-1" autocomplete="off">
+
+                <div class="modal-body">
+                    <div style="text-align: center; margin-bottom: 12px;">
+                        <h4 style="font-size: 15px; color: var(--solubio-dark);">Cadastro de Novo Consultor</h4>
+                        <p style="font-size: 11px; color: var(--text-secondary); margin-bottom: 4px;">Crie sua conta para gerenciar e salvar seus laudos microbiológicos.</p>
+                        <div style="display: inline-flex; align-items: center; gap: 4px; font-size: 10px; color: #047857; background: #ecfdf5; padding: 3px 8px; border-radius: 12px; border: 1px solid #a7f3d0;">
+                            <i class="fa-solid fa-shield-cat"></i> Verificação Anti-Bot em Tempo Real
+                        </div>
+                    </div>
+
+                    <div class="form-group mb-2">
+                        <label for="reg-name">Nome Completo</label>
+                        <input type="text" id="reg-name" required placeholder="Ex: Rogério Castro">
+                    </div>
+
+                    <div class="form-group mb-2">
+                        <label for="reg-email">E-mail Profissional</label>
+                        <input type="email" id="reg-email" required placeholder="rogerio@solubio.agr.br">
+                    </div>
+
+                    <div class="form-group mb-2">
+                        <label for="reg-password">Senha de Acesso</label>
+                        <input type="password" id="reg-password" required placeholder="Crie sua senha">
+                    </div>
+
+                    <div class="form-group mb-2">
+                        <label for="reg-coordinator">Seu Coordenador Responsável</label>
+                        <select id="reg-coordinator" required>
+                            <!-- Preenchido via JS -->
+                        </select>
+                    </div>
+
+                    <!-- DESAFIO CAPTCHA ANTI-ROBÔ -->
+                    <div class="captcha-box mb-2" style="padding: 10px 12px; background: #f8fafc; border-radius: 8px; border: 1px solid var(--border-color);">
+                        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
+                            <label for="captcha-reg-answer" style="font-size: 11px; font-weight: 700; color: var(--solubio-dark); margin: 0; display: flex; align-items: center; gap: 6px;">
+                                <i class="fa-solid fa-shield-cat" style="color: #10b981;"></i> Validação Humana: quanto é <span id="captcha-reg-question" style="font-size: 13px; font-weight: 800; color: #003e15; background: #e2e8f0; padding: 2px 6px; border-radius: 4px;">?</span>
+                            </label>
+                            <button type="button" id="btn-refresh-captcha-reg" class="btn-icon" title="Trocar Desafio" style="background: none; border: none; cursor: pointer; color: var(--text-secondary); font-size: 12px;">
+                                <i class="fa-solid fa-rotate-right"></i>
+                            </button>
+                        </div>
+                        <input type="number" id="captcha-reg-answer" class="form-control" placeholder="Digite o resultado" required style="padding: 6px 10px; font-size: 12px;">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="submit" class="btn-primary btn-block btn-lg" style="background: linear-gradient(135deg, #10b981, #059669);">
+                        <i class="fa-solid fa-user-check"></i> Finalizar Cadastro e Entrar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL 2: REPOSITÓRIO DE LAUDOS GERADOS -->
+    <div class="modal-overlay" id="modal-laudos">
+        <div class="modal-card modal-xl">
+            <div class="modal-header">
+                <div class="modal-title">
+                    <i class="fa-solid fa-folder-open"></i> Repositório de Laudos Gerados
+                    <span class="badge" id="laudos-count-badge">0</span>
+                </div>
+                <button type="button" class="modal-close" data-close="modal-laudos">&times;</button>
+            </div>
+            <div class="modal-body">
+                <!-- Filtros do Repositório -->
+                <div class="repository-filter-bar">
+                    <div class="filter-input-group">
+                        <label for="filter-search">Buscar por Nº, Cliente ou Produto</label>
+                        <input type="text" id="filter-search" placeholder="Ex: 044.2025 ou Fazenda...">
+                    </div>
+                    <div class="filter-input-group" id="filter-author-group">
+                        <label for="filter-author">Filtrar por Responsável</label>
+                        <select id="filter-author">
+                            <option value="">Todos os Responsáveis</option>
+                        </select>
+                    </div>
+                    <div class="filter-input-group">
+                        <label for="filter-date">Data da Emissão</label>
+                        <input type="date" id="filter-date">
+                    </div>
+                </div>
+
+                <!-- Tabela de Laudos -->
+                <div style="overflow-x: auto;">
+                    <table class="app-table">
+                        <thead>
+                            <tr>
+                                <th>Nº Laudo</th>
+                                <th>Cliente / Fazenda</th>
+                                <th>Produto</th>
+                                <th>Microrganismo</th>
+                                <th>Data Emissão</th>
+                                <th>Gerado por</th>
+                                <th>Nível</th>
+                                <th style="text-align: right;">Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="laudos-table-body">
+                            <!-- Preenchido via JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-secondary" data-close="modal-laudos">Fechar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL 3: GERENCIAMENTO DE USUÁRIOS (ADMIN PRINCIPAL) -->
+    <div class="modal-overlay" id="modal-users">
+        <div class="modal-card modal-lg">
+            <div class="modal-header">
+                <div class="modal-title">
+                    <i class="fa-solid fa-users-gear"></i> Gerenciamento de Usuários e Hierarquia
+                </div>
+                <button type="button" class="modal-close" data-close="modal-users">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                    <p style="font-size: 13px; color: var(--text-secondary); margin: 0;">
+                        Cadastre, edite e vincule consultores aos seus respectivos coordenadores.
+                    </p>
+                    <button type="button" class="btn-primary" id="btn-show-add-user">
+                        <i class="fa-solid fa-user-plus"></i> Novo Usuário
+                    </button>
+                </div>
+
+                <!-- Formulário de Cadastro/Edição de Usuário -->
+                <form id="form-user-edit" class="hidden mb-4" style="background: #f8fafc; padding: 16px; border-radius: 10px; border: 1px solid var(--border-color);">
+                    <h4 id="user-form-title" style="font-size: 14px; margin-bottom: 12px; color: var(--solubio-dark);">Cadastrar Novo Usuário</h4>
+                    <input type="hidden" id="user-edit-id">
+                    <div class="form-grid">
+                        <div class="form-group col-6">
+                            <label for="user-input-name">Nome Completo</label>
+                            <input type="text" id="user-input-name" required placeholder="Ex: Roberto Alves">
+                        </div>
+                        <div class="form-group col-6">
+                            <label for="user-input-email">E-mail</label>
+                            <input type="email" id="user-input-email" required placeholder="roberto@solubio.com">
+                        </div>
+                        <div class="form-group col-4">
+                            <label for="user-input-pass">Senha</label>
+                            <input type="text" id="user-input-pass" required placeholder="123">
+                        </div>
+                        <div class="form-group col-4">
+                            <label for="user-input-role">Função / Nível</label>
+                            <select id="user-input-role" required>
+                                <option value="consultor">Consultor</option>
+                                <option value="coordenador">Coordenador</option>
+                                <option value="admin">Admin Principal</option>
+                            </select>
+                        </div>
+                        <div class="form-group col-4" id="group-coord-select">
+                            <label for="user-input-coord">Coordenador Responsável</label>
+                            <select id="user-input-coord">
+                                <option value="">Nenhum (Independente)</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 12px;">
+                        <button type="button" class="btn-secondary" id="btn-cancel-user">Cancelar</button>
+                        <button type="submit" class="btn-primary"><i class="fa-solid fa-check"></i> Salvar Usuário</button>
+                    </div>
+                </form>
+
+                <!-- Tabela de Usuários -->
+                <div style="overflow-x: auto;">
+                    <table class="app-table">
+                        <thead>
+                            <tr>
+                                <th>Nome</th>
+                                <th>E-mail</th>
+                                <th>Função</th>
+                                <th>Coordenador Direto</th>
+                                <th style="text-align: right;">Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="users-table-body">
+                            <!-- Preenchido via JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-secondary" data-close="modal-users">Fechar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL 4: MINHA EQUIPE (COORDENADOR) -->
+    <div class="modal-overlay" id="modal-equipe">
+        <div class="modal-card modal-lg">
+            <div class="modal-header">
+                <div class="modal-title">
+                    <i class="fa-solid fa-users"></i> Minha Equipe de Consultores
+                </div>
+                <button type="button" class="modal-close" data-close="modal-equipe">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 16px;">
+                    Abaixo estão listados todos os consultores sob sua supervisão e coordenação.
+                </p>
+                <div style="overflow-x: auto;">
+                    <table class="app-table">
+                        <thead>
+                            <tr>
+                                <th>Consultor</th>
+                                <th>E-mail</th>
+                                <th style="text-align: center;">Laudos Gerados</th>
+                                <th style="text-align: right;">Ação</th>
+                            </tr>
+                        </thead>
+                        <tbody id="team-table-body">
+                            <!-- Preenchido via JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-secondary" data-close="modal-equipe">Fechar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL 5: MEUS CLIENTES E FAZENDAS -->
+    <div class="modal-overlay" id="modal-clients">
+        <div class="modal-card modal-lg">
+            <div class="modal-header">
+                <div class="modal-title">
+                    <i class="fa-solid fa-tractor"></i> Meus Clientes e Fazendas
+                </div>
+                <button type="button" class="modal-close" data-close="modal-clients">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                    <p style="font-size: 13px; color: var(--text-secondary); margin: 0;">
+                        Cadastre, edite e organize seus clientes para rápido preenchimento dos laudos.
+                    </p>
+                    <button type="button" class="btn-primary" id="btn-show-add-client">
+                        <i class="fa-solid fa-plus"></i> Novo Cliente / Fazenda
+                    </button>
+                </div>
+
+                <!-- Formulário de Adicionar/Editar Cliente -->
+                <form id="form-client-edit" class="hidden mb-4" style="background: #f8fafc; padding: 16px; border-radius: 10px; border: 1px solid var(--border-color);">
+                    <h4 id="client-form-title" style="font-size: 14px; margin-bottom: 12px; color: var(--solubio-dark);">Cadastrar Cliente / Fazenda</h4>
+                    <input type="hidden" id="client-edit-id">
+                    <div class="form-group col-12">
+                        <label for="client-input-name">Nome do Cliente e Fazenda</label>
+                        <input type="text" id="client-input-name" required placeholder="Ex: Roberto Alves - Fazenda Santa Rita">
+                    </div>
+                    <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 12px;">
+                        <button type="button" class="btn-secondary" id="btn-cancel-client">Cancelar</button>
+                        <button type="submit" class="btn-primary"><i class="fa-solid fa-check"></i> Salvar Cliente</button>
+                    </div>
+                </form>
+
+                <!-- Tabela de Clientes -->
+                <div style="overflow-x: auto;">
+                    <table class="app-table">
+                        <thead>
+                            <tr>
+                                <th>Cliente / Fazenda</th>
+                                <th style="text-align: right;">Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="clients-table-body">
+                            <!-- Preenchido via JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-secondary" data-close="modal-clients">Fechar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL 6: PRIMEIRA BOAS-VINDAS / CADASTRAR PRIMEIRO CLIENTE -->
+    <div class="modal-overlay" id="modal-client-welcome">
+        <div class="modal-card">
+            <div class="modal-header">
+                <div class="modal-title">
+                    <i class="fa-solid fa-seedling"></i> Primeiros Passos
+                </div>
+                <button type="button" class="modal-close" data-close="modal-client-welcome">&times;</button>
+            </div>
+            <form id="form-first-client">
+                <div class="modal-body">
+                    <div style="text-align: center; margin-bottom: 16px;">
+                        <span style="font-size: 32px;">👋</span>
+                        <h3 style="font-size: 16px; margin-top: 6px; color: var(--solubio-dark);">Bem-vindo ao Sistema de Laudos!</h3>
+                        <p style="font-size: 12px; color: var(--text-secondary); margin-top: 4px;">
+                            Cadastre o seu <strong>primeiro Cliente / Fazenda</strong> para começar a gerar e organizar seus laudos.
+                        </p>
+                    </div>
+
+                    <div class="form-group mb-3">
+                        <label for="first-client-name">Nome do Cliente e Fazenda</label>
+                        <input type="text" id="first-client-name" class="form-control" placeholder="Ex: Marcos Souza - Fazenda Boa Vista" required>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="submit" class="btn-primary btn-block btn-lg" style="background: linear-gradient(135deg, #059669, #10b981);">
+                        <i class="fa-solid fa-check"></i> Salvar e Iniciar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Container de Toasts -->
+    <div class="toast-container" id="toast-container"></div>
+
+    <!-- Scripts -->
+    <script src="auth-store.js?v=1"></script>
+    <script src="app.js?v=8"></script>
 </body>
 </html>

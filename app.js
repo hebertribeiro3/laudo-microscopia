@@ -462,7 +462,8 @@ document.addEventListener('DOMContentLoaded', () => {
     form.addEventListener('change', updatePreview);
 
     // Print event
-    btnPrint.addEventListener('click', () => {
+    btnPrint.addEventListener('click', async () => {
+        await saveCurrentLaudo(false);
         const originalZoom = zoomLevel;
         zoomLevel = 100;
         updateZoom();
@@ -473,84 +474,96 @@ document.addEventListener('DOMContentLoaded', () => {
         }, 500);
     });
 
+    // Save Laudo button event
+    const btnSaveLaudo = document.getElementById('btn-save-laudo');
+    if (btnSaveLaudo) {
+        btnSaveLaudo.addEventListener('click', async () => {
+            await saveCurrentLaudo(true);
+        });
+    }
+
     // Reset Form
     btnReset.addEventListener('click', () => {
         if (confirm('Tem certeza de que deseja limpar todos os campos do laudo?')) {
             form.reset();
+            currentEditingLaudoId = null;
             
+            // Clear base64 images
             base64Image40x = "";
             base64Image100x = "";
-            
             imgPreview40x.src = "";
             imgPreview40x.style.display = 'none';
-            placeholder40x.style.display = 'flex';
+            placeholder40x.style.display = 'block';
             dropzone40x.querySelector('.file-name').textContent = "Nenhuma foto selecionada";
-            
+
             imgPreview100x.src = "";
             imgPreview100x.style.display = 'none';
-            placeholder100x.style.display = 'flex';
+            placeholder100x.style.display = 'block';
             dropzone100x.querySelector('.file-name').textContent = "Nenhuma foto selecionada";
-            
-            inputAmostraOutro.classList.add('hidden');
+
+            // Hide "Outro" inputs
             inputClienteOutro.classList.add('hidden');
             inputProdutoOutro.classList.add('hidden');
-            
-            localStorage.removeItem('laudo_micros_state');
-            
+            inputAmostraOutro.classList.add('hidden');
+
             setDefaultDates();
             setPredefinedDefaults();
             updatePreview();
+            showToast('Formulário limpo com sucesso.', 'info');
         }
     });
 
     // Load Demo Data
     btnLoadDemo.addEventListener('click', () => {
         document.getElementById('relatorio_num').value = "044.2025";
-        document.getElementById('data_emissao').value = "2025-12-10";
+        setDefaultDates();
         
-        // Cliente "SLC"
-        selectCliente.value = "Outro";
-        inputClienteOutro.classList.remove('hidden');
-        inputClienteOutro.value = "SLC";
-        
+        selectCliente.value = "Gilson Adriano Bomfim - Fazenda Sagrada Fámilia";
+        inputClienteOutro.classList.add('hidden');
+
         setRadioValue('tipo_amostra', 'Multiplicado');
-        setRadioValue('meio_cultura', 'BUG');
-        setRadioValue('tipo_compressor', 'Odontológico');
-        
-        // Produto "Tec Bug" is in database
-        selectProduto.value = "Tec Bug";
+        inputAmostraOutro.classList.add('hidden');
+
+        selectProduto.value = "Bio Balance";
         inputProdutoOutro.classList.add('hidden');
+        inputMicrorganismo.value = "Bacillus amyloliquefaciens";
+
+        setRadioValue('meio_cultura', 'BAC');
+        setRadioValue('tipo_compressor', 'Odontológico');
+
+        document.getElementById('lote_produto').value = "LT-2025-019";
+        document.getElementById('lote_meio').value = "LM-884";
+        document.getElementById('temperatura').value = "28";
+        document.getElementById('ph').value = "6.8";
+
+        const today = new Date();
+        const yesterday = new Date(today);
+        yesterday.setDate(yesterday.getDate() - 1);
+        const yesterdayStr = yesterday.toISOString().split('T')[0];
+
+        document.getElementById('data_multiplicacao').value = yesterdayStr;
+        document.getElementById('data_coleta').value = yesterdayStr;
         
-        inputMicrorganismo.value = "Chromobacterium"; // As written in original laudo example
+        const currentUser = AuthManager.getCurrentUser();
+        inputColeta.value = currentUser ? currentUser.name : "João Silva";
+        inputAnalise.value = currentUser ? currentUser.name : "João Silva";
+
+        document.getElementById('observacoes').value = "Amostra analisada conforme metodologia padrão. Apresentou crescimento característico e alta viabilidade microbiológica.";
+
+        document.getElementById('data_recebimento').value = yesterdayStr;
+        document.getElementById('data_analise').value = new Date().toISOString().split('T')[0];
         
-        document.getElementById('lote_produto').value = "PA00240113";
-        document.getElementById('lote_meio').value = "PA021035";
-        document.getElementById('temperatura').value = "24";
-        document.getElementById('ph').value = "5,50";
-        document.getElementById('data_multiplicacao').value = "2025-12-09";
-        document.getElementById('data_coleta').value = "2025-12-10";
-        
-        // Responsável Coleta
-        document.getElementById('responsavel_coleta').value = "Hebert Ribeiro";
-        
-        document.getElementById('observacoes').value = "Por meio da análise qualitativa por microscopia, foi possível verificar que o processo de multiplicação resultou alta concentração do microrganismo de interesse, e apresentou baixíssima detecção de outros microrganismos";
-        
-        document.getElementById('data_recebimento').value = "2025-12-10";
-        document.getElementById('data_analise').value = "2025-12-10";
         document.getElementById('tecnica_plaqueamento').value = "NA";
         document.getElementById('diluicoes').value = "NA";
         document.getElementById('temp_incubacao').value = "NA";
         document.getElementById('tempo_incubacao').value = "NA";
         setRadioValue('choque_termico', 'NÃO');
-        document.getElementById('coloracao_gram').value = "Bastonetes gram negativa";
-        
-        // Responsável Análise
-        document.getElementById('responsavel_analise').value = "Hebert Ribeiro";
-        
+        document.getElementById('coloracao_gram').value = "Bastonetes gram-positivos com presença de endósporos viáveis";
+
         setRadioValue('resultado_qualitativo', 'EXCELENTE');
         setRadioValue('outros_microrganismos', 'PRESENTE');
 
-        // Set demo images (if present locally, we link them)
+        // Set demo images
         imgPreview40x.src = "media_extracted/image1.jpeg";
         imgPreview40x.style.display = 'block';
         placeholder40x.style.display = 'none';
@@ -564,6 +577,7 @@ document.addEventListener('DOMContentLoaded', () => {
         base64Image100x = "media_extracted/image2.jpeg";
         
         updatePreview();
+        showToast('Dados de exemplo carregados!', 'success');
     });
 
     function setRadioValue(name, value) {
@@ -576,79 +590,178 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // Set default dates to current date
     function setDefaultDates() {
         const today = new Date().toISOString().split('T')[0];
-        document.getElementById('data_emissao').value = today;
-        document.getElementById('data_coleta').value = today;
-        document.getElementById('data_recebimento').value = today;
-        document.getElementById('data_analise').value = today;
+        if (!document.getElementById('data_emissao').value) document.getElementById('data_emissao').value = today;
+        if (!document.getElementById('data_coleta').value) document.getElementById('data_coleta').value = today;
+        if (!document.getElementById('data_recebimento').value) document.getElementById('data_recebimento').value = today;
+        if (!document.getElementById('data_analise').value) document.getElementById('data_analise').value = today;
     }
 
-    // Set predefined defaults requested by user: NA and Hebert
     function setPredefinedDefaults() {
         document.getElementById('tecnica_plaqueamento').value = "NA";
         document.getElementById('diluicoes').value = "NA";
         document.getElementById('temp_incubacao').value = "NA";
         document.getElementById('tempo_incubacao').value = "NA";
-        document.getElementById('responsavel_coleta').value = "Hebert";
-        document.getElementById('responsavel_analise').value = "Hebert";
+        
+        const currentUser = AuthManager.getCurrentUser();
+        if (currentUser) {
+            if (!inputColeta.value) inputColeta.value = currentUser.name;
+            if (!inputAnalise.value) inputAnalise.value = currentUser.name;
+        }
     }
 
     // ----------------------------------------------------
-    // LocalStorage State Management
+    // State & Form Extraction Helpers
     // ----------------------------------------------------
-    
+    let currentEditingLaudoId = null;
+
+    function getFormState() {
+        return {
+            relatorio_num: document.getElementById('relatorio_num').value,
+            data_emissao: document.getElementById('data_emissao').value,
+            cliente_fazenda: selectCliente.value,
+            cliente_fazenda_outro: inputClienteOutro.value,
+            tipo_amostra: getRadioValue('tipo_amostra'),
+            tipo_amostra_outro: inputAmostraOutro.value,
+            meio_cultura: getRadioValue('meio_cultura'),
+            tipo_compressor: getRadioValue('tipo_compressor'),
+            nome_produto: selectProduto.value,
+            nome_produto_outro: inputProdutoOutro.value,
+            microrganismo: inputMicrorganismo.value,
+            lote_produto: document.getElementById('lote_produto').value,
+            lote_meio: document.getElementById('lote_meio').value,
+            temperatura: document.getElementById('temperatura').value,
+            ph: document.getElementById('ph').value,
+            data_multiplicacao: document.getElementById('data_multiplicacao').value,
+            data_coleta: document.getElementById('data_coleta').value,
+            responsavel_coleta: inputColeta.value,
+            observacoes: document.getElementById('observacoes').value,
+            
+            data_recebimento: document.getElementById('data_recebimento').value,
+            data_analise: document.getElementById('data_analise').value,
+            tecnica_plaqueamento: document.getElementById('tecnica_plaqueamento').value,
+            diluicoes: document.getElementById('diluicoes').value,
+            temp_incubacao: document.getElementById('temp_incubacao').value,
+            tempo_incubacao: document.getElementById('tempo_incubacao').value,
+            choque_termico: getRadioValue('choque_termico'),
+            coloracao_gram: document.getElementById('coloracao_gram').value,
+            responsavel_analise: inputAnalise.value,
+            
+            resultado_qualitativo: getRadioValue('resultado_qualitativo'),
+            outros_microrganismos: getRadioValue('outros_microrganismos'),
+            
+            image40x: base64Image40x,
+            image100x: base64Image100x,
+            image40xName: dropzone40x.querySelector('.file-name').textContent,
+            image100xName: dropzone100x.querySelector('.file-name').textContent
+        };
+    }
+
     function saveToLocalStorage() {
         try {
-            const state = {
-                relatorio_num: document.getElementById('relatorio_num').value,
-                data_emissao: document.getElementById('data_emissao').value,
-                cliente_fazenda: selectCliente.value,
-                cliente_fazenda_outro: inputClienteOutro.value,
-                tipo_amostra: getRadioValue('tipo_amostra'),
-                tipo_amostra_outro: inputAmostraOutro.value,
-                meio_cultura: getRadioValue('meio_cultura'),
-                tipo_compressor: getRadioValue('tipo_compressor'),
-                nome_produto: selectProduto.value,
-                nome_produto_outro: inputProdutoOutro.value,
-                microrganismo: inputMicrorganismo.value,
-                lote_produto: document.getElementById('lote_produto').value,
-                lote_meio: document.getElementById('lote_meio').value,
-                temperatura: document.getElementById('temperatura').value,
-                ph: document.getElementById('ph').value,
-                data_multiplicacao: document.getElementById('data_multiplicacao').value,
-                data_coleta: document.getElementById('data_coleta').value,
-                responsavel_coleta: inputColeta.value,
-                observacoes: document.getElementById('observacoes').value,
-                
-                data_recebimento: document.getElementById('data_recebimento').value,
-                data_analise: document.getElementById('data_analise').value,
-                tecnica_plaqueamento: document.getElementById('tecnica_plaqueamento').value,
-                diluicoes: document.getElementById('diluicoes').value,
-                temp_incubacao: document.getElementById('temp_incubacao').value,
-                tempo_incubacao: document.getElementById('tempo_incubacao').value,
-                choque_termico: getRadioValue('choque_termico'),
-                coloracao_gram: document.getElementById('coloracao_gram').value,
-                responsavel_analise: inputAnalise.value,
-                
-                resultado_qualitativo: getRadioValue('resultado_qualitativo'),
-                outros_microrganismos: getRadioValue('outros_microrganismos'),
-                
-                image40x: base64Image40x.startsWith('data:') ? base64Image40x : "",
-                image100x: base64Image100x.startsWith('data:') ? base64Image100x : "",
-                image40xName: dropzone40x.querySelector('.file-name').textContent,
-                image100xName: dropzone100x.querySelector('.file-name').textContent
-            };
+            const state = getFormState();
             localStorage.setItem('laudo_micros_state', JSON.stringify(state));
         } catch (e) {
-            console.warn("Não foi possível salvar o estado no localStorage (provavelmente limite de cota excedido devido a imagens base64):", e);
+            console.warn("Quota excedida no LocalStorage para imagens.", e);
         }
     }
 
     function getRadioValue(name) {
         const checked = document.querySelector(`input[name="${name}"]:checked`);
         return checked ? checked.value : "";
+    }
+
+    function loadFormState(state) {
+        if (!state) return;
+        
+        document.getElementById('relatorio_num').value = state.relatorio_num || "";
+        document.getElementById('data_emissao').value = state.data_emissao || "";
+        
+        if (state.cliente_fazenda) {
+            selectCliente.value = state.cliente_fazenda;
+            if (state.cliente_fazenda === 'Outro') {
+                inputClienteOutro.classList.remove('hidden');
+                inputClienteOutro.value = state.cliente_fazenda_outro || "";
+            } else {
+                inputClienteOutro.classList.add('hidden');
+            }
+        }
+        
+        if (state.tipo_amostra) setRadioValue('tipo_amostra', state.tipo_amostra);
+        inputAmostraOutro.value = state.tipo_amostra_outro || "";
+        if (state.meio_cultura) setRadioValue('meio_cultura', state.meio_cultura);
+        if (state.tipo_compressor) setRadioValue('tipo_compressor', state.tipo_compressor);
+        
+        if (state.nome_produto) {
+            selectProduto.value = state.nome_produto;
+            if (state.nome_produto === 'Outro') {
+                inputProdutoOutro.classList.remove('hidden');
+                inputProdutoOutro.value = state.nome_produto_outro || "";
+            } else {
+                inputProdutoOutro.classList.add('hidden');
+            }
+        }
+        
+        inputMicrorganismo.value = state.microrganismo || "";
+        document.getElementById('lote_produto').value = state.lote_produto || "";
+        document.getElementById('lote_meio').value = state.lote_meio || "";
+        document.getElementById('temperatura').value = state.temperatura || "";
+        document.getElementById('ph').value = state.ph || "";
+        document.getElementById('data_multiplicacao').value = state.data_multiplicacao || "";
+        document.getElementById('data_coleta').value = state.data_coleta || "";
+        
+        if (state.responsavel_coleta) {
+            inputColeta.value = state.responsavel_coleta;
+        }
+        
+        document.getElementById('observacoes').value = state.observacoes || "";
+        
+        document.getElementById('data_recebimento').value = state.data_recebimento || "";
+        document.getElementById('data_analise').value = state.data_analise || "";
+        document.getElementById('tecnica_plaqueamento').value = state.tecnica_plaqueamento || "NA";
+        document.getElementById('diluicoes').value = state.diluicoes || "NA";
+        document.getElementById('temp_incubacao').value = state.temp_incubacao || "NA";
+        document.getElementById('tempo_incubacao').value = state.tempo_incubacao || "NA";
+        if (state.choque_termico) setRadioValue('choque_termico', state.choque_termico);
+        document.getElementById('coloracao_gram').value = state.coloracao_gram || "";
+        
+        if (state.responsavel_analise) {
+            inputAnalise.value = state.responsavel_analise;
+        }
+        
+        if (state.resultado_qualitativo) setRadioValue('resultado_qualitativo', state.resultado_qualitativo);
+        if (state.outros_microrganismos) setRadioValue('outros_microrganismos', state.outros_microrganismos);
+        
+        if (state.image40x) {
+            base64Image40x = state.image40x;
+            imgPreview40x.src = state.image40x;
+            imgPreview40x.style.display = 'block';
+            placeholder40x.style.display = 'none';
+            dropzone40x.querySelector('.file-name').textContent = state.image40xName || "Imagem carregada";
+        } else {
+            base64Image40x = "";
+            imgPreview40x.src = "";
+            imgPreview40x.style.display = 'none';
+            placeholder40x.style.display = 'block';
+            dropzone40x.querySelector('.file-name').textContent = "Nenhuma foto selecionada";
+        }
+
+        if (state.image100x) {
+            base64Image100x = state.image100x;
+            imgPreview100x.src = state.image100x;
+            imgPreview100x.style.display = 'block';
+            placeholder100x.style.display = 'none';
+            dropzone100x.querySelector('.file-name').textContent = state.image100xName || "Imagem carregada";
+        } else {
+            base64Image100x = "";
+            imgPreview100x.src = "";
+            imgPreview100x.style.display = 'none';
+            placeholder100x.style.display = 'block';
+            dropzone100x.querySelector('.file-name').textContent = "Nenhuma foto selecionada";
+        }
+        
+        updatePreview();
     }
 
     function loadFromLocalStorage() {
@@ -662,77 +775,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         try {
             const state = JSON.parse(stored);
-            
-            document.getElementById('relatorio_num').value = state.relatorio_num || "";
-            document.getElementById('data_emissao').value = state.data_emissao || "";
-            
-            if (state.cliente_fazenda) {
-                selectCliente.value = state.cliente_fazenda;
-                if (state.cliente_fazenda === 'Outro') {
-                    inputClienteOutro.classList.remove('hidden');
-                    inputClienteOutro.value = state.cliente_fazenda_outro || "";
-                }
-            }
-            
-            if (state.tipo_amostra) setRadioValue('tipo_amostra', state.tipo_amostra);
-            inputAmostraOutro.value = state.tipo_amostra_outro || "";
-            if (state.meio_cultura) setRadioValue('meio_cultura', state.meio_cultura);
-            if (state.tipo_compressor) setRadioValue('tipo_compressor', state.tipo_compressor);
-            
-            if (state.nome_produto) {
-                selectProduto.value = state.nome_produto;
-                if (state.nome_produto === 'Outro') {
-                    inputProdutoOutro.classList.remove('hidden');
-                    inputProdutoOutro.value = state.nome_produto_outro || "";
-                }
-            }
-            
-            inputMicrorganismo.value = state.microrganismo || "";
-            document.getElementById('lote_produto').value = state.lote_produto || "";
-            document.getElementById('lote_meio').value = state.lote_meio || "";
-            document.getElementById('temperatura').value = state.temperatura || "";
-            document.getElementById('ph').value = state.ph || "";
-            document.getElementById('data_multiplicacao').value = state.data_multiplicacao || "";
-            document.getElementById('data_coleta').value = state.data_coleta || "";
-            
-            if (state.responsavel_coleta) {
-                inputColeta.value = state.responsavel_coleta;
-            }
-            
-            document.getElementById('observacoes').value = state.observacoes || "";
-            
-            document.getElementById('data_recebimento').value = state.data_recebimento || "";
-            document.getElementById('data_analise').value = state.data_analise || "";
-            document.getElementById('tecnica_plaqueamento').value = state.tecnica_plaqueamento || "NA";
-            document.getElementById('diluicoes').value = state.diluicoes || "NA";
-            document.getElementById('temp_incubacao').value = state.temp_incubacao || "NA";
-            document.getElementById('tempo_incubacao').value = state.tempo_incubacao || "NA";
-            if (state.choque_termico) setRadioValue('choque_termico', state.choque_termico);
-            document.getElementById('coloracao_gram').value = state.coloracao_gram || "";
-            
-            if (state.responsavel_analise) {
-                inputAnalise.value = state.responsavel_analise;
-            }
-            
-            if (state.resultado_qualitativo) setRadioValue('resultado_qualitativo', state.resultado_qualitativo);
-            if (state.outros_microrganismos) setRadioValue('outros_microrganismos', state.outros_microrganismos);
-            
-            if (state.image40x) {
-                base64Image40x = state.image40x;
-                imgPreview40x.src = state.image40x;
-                imgPreview40x.style.display = 'block';
-                placeholder40x.style.display = 'none';
-                dropzone40x.querySelector('.file-name').textContent = state.image40xName || "Imagem carregada";
-            }
-            if (state.image100x) {
-                base64Image100x = state.image100x;
-                imgPreview100x.src = state.image100x;
-                imgPreview100x.style.display = 'block';
-                placeholder100x.style.display = 'none';
-                dropzone100x.querySelector('.file-name').textContent = state.image100xName || "Imagem carregada";
-            }
-            
-            updatePreview();
+            loadFormState(state);
         } catch (e) {
             console.error("Erro ao carregar estado do LocalStorage:", e);
             setDefaultDates();
@@ -741,7 +784,931 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // Initialize application state
+    // ----------------------------------------------------
+    // Save Laudo into IndexedDB
+    // ----------------------------------------------------
+    async function saveCurrentLaudo(showNotification = true) {
+        const user = AuthManager.getCurrentUser();
+        if (!user) {
+            openModal('modal-login');
+            showToast('Por favor, faça login para salvar laudos.', 'info');
+            return null;
+        }
+
+        const state = getFormState();
+        const laudoId = currentEditingLaudoId || ('laudo_' + Date.now());
+
+        let coordName = null;
+        if (user.role === 'consultor' && user.coordinatorId) {
+            const users = await LaudoDB.getUsers();
+            const coord = users.find(u => u.id === user.coordinatorId);
+            if (coord) coordName = coord.name;
+        }
+
+        const laudoRecord = {
+            id: laudoId,
+            relatorio_num: state.relatorio_num || 'Sem Nº',
+            cliente_fazenda: state.cliente_fazenda === 'Outro' ? state.cliente_fazenda_outro : state.cliente_fazenda,
+            nome_produto: state.nome_produto === 'Outro' ? state.nome_produto_outro : state.nome_produto,
+            microrganismo: state.microrganismo,
+            data_emissao: state.data_emissao,
+            data_analise: state.data_analise,
+            authorId: user.id,
+            authorName: user.name,
+            authorRole: user.role,
+            coordinatorId: user.coordinatorId || (user.role === 'coordenador' ? user.id : null),
+            coordinatorName: coordName || (user.role === 'coordenador' ? user.name : null),
+            createdAt: new Date().toISOString(),
+            formData: state
+        };
+
+        await LaudoDB.saveLaudo(laudoRecord);
+        currentEditingLaudoId = laudoId;
+        saveToLocalStorage();
+
+        if (showNotification) {
+            showToast(`Laudo Nº ${laudoRecord.relatorio_num} salvo no sistema com sucesso!`, 'success');
+        }
+        return laudoRecord;
+    }
+
+    // ----------------------------------------------------
+    // Modal Helpers & Handlers
+    // ----------------------------------------------------
+    // ----------------------------------------------------
+    // ANTI-BOT & SECURITY SYSTEM (CAPTCHA, HONEYPOT, RATE LIMITING)
+    // ----------------------------------------------------
+    let captchaLoginTarget = 0;
+    let captchaRegTarget = 0;
+    let failedLoginAttempts = 0;
+    let lockoutUntil = 0;
+
+    function generateCaptcha(type) {
+        const num1 = Math.floor(Math.random() * 8) + 2;
+        const num2 = Math.floor(Math.random() * 9) + 1;
+        const sum = num1 + num2;
+        
+        if (type === 'login') {
+            captchaLoginTarget = sum;
+            const label = document.getElementById('captcha-login-question');
+            if (label) label.textContent = `${num1} + ${num2}`;
+            const input = document.getElementById('captcha-login-answer');
+            if (input) input.value = '';
+        } else if (type === 'reg') {
+            captchaRegTarget = sum;
+            const label = document.getElementById('captcha-reg-question');
+            if (label) label.textContent = `${num1} + ${num2}`;
+            const input = document.getElementById('captcha-reg-answer');
+            if (input) input.value = '';
+        }
+    }
+
+    document.getElementById('btn-refresh-captcha-login')?.addEventListener('click', () => generateCaptcha('login'));
+    document.getElementById('btn-refresh-captcha-reg')?.addEventListener('click', () => generateCaptcha('reg'));
+
+    async function populateRegisterCoordinators() {
+        const select = document.getElementById('reg-coordinator');
+        if (!select) return;
+        const users = await LaudoDB.getUsers();
+        const coords = users.filter(u => u.role === 'coordenador');
+        select.innerHTML = coords.length ? 
+            coords.map(c => `<option value="${c.id}">${c.name}</option>`).join('') :
+            '<option value="">Nenhum coordenador disponível</option>';
+    }
+
+    function openModal(id) {
+        const el = document.getElementById(id);
+        if (el) {
+            el.classList.add('active');
+            if (id === 'modal-login') {
+                populateRegisterCoordinators();
+                generateCaptcha('login');
+                generateCaptcha('reg');
+            }
+        }
+    }
+
+    function closeModal(id) {
+        const el = document.getElementById(id);
+        if (el) el.classList.remove('active');
+    }
+
+    document.querySelectorAll('[data-close]').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const modalId = e.currentTarget.getAttribute('data-close');
+            closeModal(modalId);
+        });
+    });
+
+    document.querySelectorAll('.modal-overlay').forEach(overlay => {
+        overlay.addEventListener('click', (e) => {
+            if (e.target === overlay && overlay.id !== 'modal-login') {
+                overlay.classList.remove('active');
+            }
+        });
+    });
+
+    // Auth Tab Switching (Entrar vs Cadastrar Consultor)
+    const tabLoginBtn = document.getElementById('tab-login-btn');
+    const tabRegisterBtn = document.getElementById('tab-register-btn');
+    const formLogin = document.getElementById('form-login');
+    const formRegister = document.getElementById('form-register-consultant');
+
+    if (tabLoginBtn && tabRegisterBtn) {
+        tabLoginBtn.addEventListener('click', () => {
+            tabLoginBtn.style.color = 'var(--solubio-dark)';
+            tabLoginBtn.style.borderBottom = '2px solid var(--solubio-dark)';
+            tabRegisterBtn.style.color = 'var(--text-secondary)';
+            tabRegisterBtn.style.borderBottom = 'none';
+
+            formLogin.classList.remove('hidden');
+            formRegister.classList.add('hidden');
+            generateCaptcha('login');
+        });
+
+        tabRegisterBtn.addEventListener('click', () => {
+            tabRegisterBtn.style.color = 'var(--solubio-dark)';
+            tabRegisterBtn.style.borderBottom = '2px solid var(--solubio-dark)';
+            tabLoginBtn.style.color = 'var(--text-secondary)';
+            tabLoginBtn.style.borderBottom = 'none';
+
+            formRegister.classList.remove('hidden');
+            formLogin.classList.add('hidden');
+            populateRegisterCoordinators();
+            generateCaptcha('reg');
+        });
+    }
+
+    // Login Form Handler
+    if (formLogin) {
+        formLogin.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            // 1. Verificação de Armadilha Honeypot
+            const hpVal = document.getElementById('login-hp')?.value;
+            if (hpVal && hpVal.trim() !== '') {
+                showToast('Acesso Bloqueado: Atividade automatizada de robô/bot detectada!', 'error');
+                return;
+            }
+
+            // 2. Verificação de Bloqueio por Força Bruta
+            if (Date.now() < lockoutUntil) {
+                const remaining = Math.ceil((lockoutUntil - Date.now()) / 1000);
+                showToast(`Acesso temporariamente bloqueado por segurança! Tente em ${remaining} segundos.`, 'error');
+                return;
+            }
+
+            // 3. Verificação do Desafio CAPTCHA
+            const userAnswer = parseInt(document.getElementById('captcha-login-answer')?.value, 10);
+            if (isNaN(userAnswer) || userAnswer !== captchaLoginTarget) {
+                failedLoginAttempts++;
+                if (failedLoginAttempts >= 4) {
+                    lockoutUntil = Date.now() + 30000;
+                    showToast('Múltiplas falhas! Acesso bloqueado por 30s contra ataques de força bruta.', 'error');
+                } else {
+                    showToast('Resultado da validação anti-robô incorreto! Tente novamente.', 'error');
+                }
+                generateCaptcha('login');
+                return;
+            }
+
+            failedLoginAttempts = 0;
+            const email = document.getElementById('login-email').value;
+            const pass = document.getElementById('login-password').value;
+            
+            const res = await AuthManager.login(email, pass);
+            if (res.success) {
+                closeModal('modal-login');
+                renderUserSessionBar();
+                setPredefinedDefaults();
+                showToast(`Bem-vindo, ${res.user.name}!`, 'success');
+                checkFirstLoginClients();
+            } else {
+                showToast(res.message, 'error');
+                generateCaptcha('login');
+            }
+        });
+    }
+
+    // Consultant Auto-Registration Handler
+    if (formRegister) {
+        formRegister.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            // 1. Verificação de Armadilha Honeypot
+            const hpVal = document.getElementById('reg-hp')?.value;
+            if (hpVal && hpVal.trim() !== '') {
+                showToast('Cadastro Bloqueado: Atividade automatizada de robô/bot detectada!', 'error');
+                return;
+            }
+
+            // 2. Verificação do Desafio CAPTCHA
+            const userAnswer = parseInt(document.getElementById('captcha-reg-answer')?.value, 10);
+            if (isNaN(userAnswer) || userAnswer !== captchaRegTarget) {
+                showToast('Resultado da validação anti-robô incorreto! Tente novamente.', 'error');
+                generateCaptcha('reg');
+                return;
+            }
+
+            const name = document.getElementById('reg-name').value;
+            const email = document.getElementById('reg-email').value;
+            const pass = document.getElementById('reg-password').value;
+            const coordId = document.getElementById('reg-coordinator').value;
+
+            const res = await AuthManager.registerConsultant(name, email, pass, coordId);
+            if (res.success) {
+                closeModal('modal-login');
+                renderUserSessionBar();
+                setPredefinedDefaults();
+                showToast(`Cadastro realizado com sucesso! Bem-vindo, ${res.user.name}.`, 'success');
+                checkFirstLoginClients();
+            } else {
+                showToast(res.message, 'error');
+                generateCaptcha('reg');
+            }
+        });
+    }
+
+    // Demo Login Buttons
+    document.querySelectorAll('.btn-demo-user').forEach(btn => {
+        btn.addEventListener('click', async () => {
+            const email = btn.getAttribute('data-email');
+            
+            const inputCaptcha = document.getElementById('captcha-login-answer');
+            if (inputCaptcha) inputCaptcha.value = captchaLoginTarget;
+
+            const res = await AuthManager.login(email, '123');
+            if (res.success) {
+                closeModal('modal-login');
+                renderUserSessionBar();
+                setPredefinedDefaults();
+                showToast(`Sessão iniciada como ${res.user.name}`, 'success');
+                checkFirstLoginClients();
+            }
+        });
+    });
+
+    // ----------------------------------------------------
+    // User Session Bar & Client Management
+    // ----------------------------------------------------
+    async function renderUserSessionBar() {
+        const bar = document.getElementById('user-session-bar');
+        if (!bar) return;
+
+        const user = AuthManager.getCurrentUser();
+        if (!user) {
+            bar.innerHTML = `
+                <div class="user-info">
+                    <div class="user-avatar" style="background: #64748b;"><i class="fa-solid fa-lock"></i></div>
+                    <div class="user-details">
+                        <span class="user-name">Não Conectado</span>
+                        <span class="user-role-badge" style="background: #64748b; color: white;">Visitante</span>
+                    </div>
+                </div>
+                <button type="button" class="user-action-btn" id="btn-open-login">
+                    <i class="fa-solid fa-right-to-bracket"></i> Entrar
+                </button>
+            `;
+            document.getElementById('btn-open-login')?.addEventListener('click', () => openModal('modal-login'));
+            openModal('modal-login');
+            return;
+        }
+
+        populateClientDropdown();
+
+        let roleBadgeClass = 'badge-role-consultor';
+        let roleLabel = 'Consultor';
+        let roleIcon = 'fa-microscope';
+
+        if (user.role === 'admin') {
+            roleBadgeClass = 'badge-role-admin';
+            roleLabel = 'Admin Principal';
+            roleIcon = 'fa-crown';
+        } else if (user.role === 'coordenador') {
+            roleBadgeClass = 'badge-role-coordenador';
+            roleLabel = 'Coordenador';
+            roleIcon = 'fa-user-tie';
+        }
+
+        const firstLetter = user.name ? user.name.charAt(0).toUpperCase() : 'U';
+
+        let actionButtonsHTML = `
+            <button type="button" class="user-action-btn" id="btn-open-clients-bar" title="Meus Clientes e Fazendas">
+                <i class="fa-solid fa-tractor"></i> Clientes
+            </button>
+            <button type="button" class="user-action-btn" id="btn-open-laudos-bar" title="Repositório de Laudos">
+                <i class="fa-solid fa-folder-open"></i> Laudos
+            </button>
+        `;
+
+        if (user.role === 'admin') {
+            actionButtonsHTML += `
+                <button type="button" class="user-action-btn" id="btn-open-users-bar" title="Gerenciar Usuários">
+                    <i class="fa-solid fa-users-gear"></i> Usuários
+                </button>
+            `;
+        } else if (user.role === 'coordenador') {
+            actionButtonsHTML += `
+                <button type="button" class="user-action-btn" id="btn-open-equipe-bar" title="Minha Equipe">
+                    <i class="fa-solid fa-users"></i> Equipe
+                </button>
+            `;
+        }
+
+        actionButtonsHTML += `
+            <button type="button" class="user-action-btn btn-logout" id="btn-logout-bar" title="Sair / Trocar Usuário">
+                <i class="fa-solid fa-right-from-bracket"></i>
+            </button>
+        `;
+
+        bar.innerHTML = `
+            <div class="user-info">
+                <div class="user-avatar">${firstLetter}</div>
+                <div class="user-details">
+                    <span class="user-name" title="${user.name}">${user.name}</span>
+                    <span class="user-role-badge ${roleBadgeClass}">
+                        <i class="fa-solid ${roleIcon}"></i> ${roleLabel}
+                    </span>
+                </div>
+            </div>
+            <div class="user-actions">
+                ${actionButtonsHTML}
+            </div>
+        `;
+
+        document.getElementById('btn-open-clients-bar')?.addEventListener('click', () => {
+            openModal('modal-clients');
+            renderClientsManagement();
+        });
+
+        document.getElementById('btn-open-laudos-bar')?.addEventListener('click', () => {
+            openModal('modal-laudos');
+            renderLaudosRepository();
+        });
+
+        document.getElementById('btn-open-users-bar')?.addEventListener('click', () => {
+            openModal('modal-users');
+            renderUsersManagement();
+        });
+
+        document.getElementById('btn-open-equipe-bar')?.addEventListener('click', () => {
+            openModal('modal-equipe');
+            renderTeamView();
+        });
+
+        document.getElementById('btn-logout-bar')?.addEventListener('click', () => {
+            AuthManager.logout();
+            renderUserSessionBar();
+            showToast('Sessão encerrada com sucesso.', 'info');
+        });
+    }
+
+    // Populate Client Select Box with User's Personal Clients
+    async function populateClientDropdown() {
+        const user = AuthManager.getCurrentUser();
+        if (!user) return;
+
+        const allClients = await LaudoDB.getClients();
+        const myClients = allClients.filter(c => c.userId === user.id);
+
+        const select = document.getElementById('cliente_fazenda');
+        if (!select) return;
+
+        const currentValue = select.value;
+
+        // Base options
+        const defaultOptions = [
+            'Gilson Adriano Bomfim - Fazenda Sagrada Fámilia',
+            'Marcelo Isoton - Fazenda Reaconquista II',
+            'SLC- Fazenda Pamplona I',
+            'Lauri Pooz - Fazenda Sete Irmão',
+            'Marcus Vinicius - Fazenda Aroeira',
+            'Flávio Gilberto Kist - Fazenda Cupim',
+            'Irineu Renato - Fazenda Pérola do Sul',
+            'Agrícola Werhmann',
+            'Willian Matté - Grupo MEC'
+        ];
+
+        let html = '<option value="" disabled selected>Selecione um Cliente / Fazenda</option>';
+
+        if (myClients.length > 0) {
+            html += '<optgroup label="⭐ Meus Clientes Cadastrados">';
+            myClients.forEach(c => {
+                html += `<option value="${c.name}">${c.name}</option>`;
+            });
+            html += '</optgroup>';
+        }
+
+        html += '<optgroup label="📋 Clientes Padrão Solubio">';
+        defaultOptions.forEach(opt => {
+            if (!myClients.some(c => c.name === opt)) {
+                html += `<option value="${opt}">${opt}</option>`;
+            }
+        });
+        html += '</optgroup>';
+
+        html += '<option value="Outro">Outro...</option>';
+
+        select.innerHTML = html;
+        if (currentValue) select.value = currentValue;
+    }
+
+    // Check First Login (If user has 0 personal clients)
+    async function checkFirstLoginClients() {
+        const user = AuthManager.getCurrentUser();
+        if (!user) return;
+
+        const allClients = await LaudoDB.getClients();
+        const myClients = allClients.filter(c => c.userId === user.id);
+
+        if (myClients.length === 0) {
+            setTimeout(() => {
+                openModal('modal-client-welcome');
+            }, 400);
+        }
+    }
+
+    // Render Client Management Table inside Modal
+    async function renderClientsManagement() {
+        const tbody = document.getElementById('clients-table-body');
+        if (!tbody) return;
+
+        const user = AuthManager.getCurrentUser();
+        if (!user) return;
+
+        const allClients = await LaudoDB.getClients();
+        const myClients = allClients.filter(c => c.userId === user.id);
+
+        if (myClients.length === 0) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="2" style="text-align: center; color: var(--text-muted); padding: 20px;">
+                        Você ainda não possui nenhum cliente/fazenda cadastrado. Clique no botão acima para adicionar.
+                    </td>
+                </tr>
+            `;
+            return;
+        }
+
+        tbody.innerHTML = myClients.map(c => `
+            <tr>
+                <td><strong>${c.name}</strong></td>
+                <td style="text-align: right;">
+                    <div class="table-actions" style="justify-content: flex-end;">
+                        <button type="button" class="btn-sm-action btn-view" onclick="editClientFromTable('${c.id}')" title="Editar">
+                            <i class="fa-solid fa-pen"></i> Editar
+                        </button>
+                        <button type="button" class="btn-sm-action btn-del" onclick="deleteClientFromTable('${c.id}')" title="Excluir">
+                            <i class="fa-solid fa-trash"></i> Excluir
+                        </button>
+                    </div>
+                </td>
+            </tr>
+        `).join('');
+    }
+
+    window.editClientFromTable = async function(id) {
+        const clients = await LaudoDB.getClients();
+        const found = clients.find(c => c.id === id);
+        if (!found) return;
+
+        document.getElementById('client-form-title').textContent = 'Editar Cliente / Fazenda';
+        document.getElementById('client-edit-id').value = found.id;
+        document.getElementById('client-input-name').value = found.name;
+
+        document.getElementById('form-client-edit').classList.remove('hidden');
+    };
+
+    window.deleteClientFromTable = async function(id) {
+        if (confirm("Tem certeza que deseja excluir este cliente/fazenda?")) {
+            await LaudoDB.deleteClient(id);
+            showToast("Cliente removido com sucesso.", 'info');
+            await populateClientDropdown();
+            renderClientsManagement();
+        }
+    };
+
+    document.getElementById('btn-show-add-client')?.addEventListener('click', () => {
+        document.getElementById('client-form-title').textContent = 'Cadastrar Cliente / Fazenda';
+        document.getElementById('client-edit-id').value = '';
+        document.getElementById('client-input-name').value = '';
+        document.getElementById('form-client-edit').classList.remove('hidden');
+    });
+
+    document.getElementById('btn-cancel-client')?.addEventListener('click', () => {
+        document.getElementById('form-client-edit').classList.add('hidden');
+    });
+
+    // Form Client Edit/Add Submit
+    const formClientEdit = document.getElementById('form-client-edit');
+    if (formClientEdit) {
+        formClientEdit.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const user = AuthManager.getCurrentUser();
+            if (!user) return;
+
+            const editId = document.getElementById('client-edit-id').value;
+            const name = document.getElementById('client-input-name').value.trim();
+
+            const clientRecord = {
+                id: editId || ('cli_' + Date.now()),
+                userId: user.id,
+                name: name
+            };
+
+            await LaudoDB.saveClient(clientRecord);
+            document.getElementById('form-client-edit').classList.add('hidden');
+            showToast(`Cliente "${name}" salvo com sucesso!`, 'success');
+            await populateClientDropdown();
+            renderClientsManagement();
+        });
+    }
+
+    // Form First Client Welcome Submit
+    const formFirstClient = document.getElementById('form-first-client');
+    if (formFirstClient) {
+        formFirstClient.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const user = AuthManager.getCurrentUser();
+            if (!user) return;
+
+            const name = document.getElementById('first-client-name').value.trim();
+            const clientRecord = {
+                id: 'cli_' + Date.now(),
+                userId: user.id,
+                name: name
+            };
+
+            await LaudoDB.saveClient(clientRecord);
+            closeModal('modal-client-welcome');
+            await populateClientDropdown();
+            
+            // Select the newly added client in the form
+            const selectClient = document.getElementById('cliente_fazenda');
+            if (selectClient) {
+                selectClient.value = name;
+                selectClient.dispatchEvent(new Event('change'));
+            }
+
+            showToast(`Cliente "${name}" cadastrado com sucesso! Agora você já pode gerar seus laudos.`, 'success');
+        });
+    }
+
+    // ----------------------------------------------------
+    // Laudos Repository Rendering & Hierarchy Filtering
+    // ----------------------------------------------------
+    async function renderLaudosRepository() {
+        const tbody = document.getElementById('laudos-table-body');
+        const badge = document.getElementById('laudos-count-badge');
+        const authorSelect = document.getElementById('filter-author');
+        if (!tbody) return;
+
+        const currentUser = AuthManager.getCurrentUser();
+        const allLaudos = await LaudoDB.getLaudos();
+        const accessibleLaudos = await AuthManager.filterAccessibleLaudos(allLaudos, currentUser);
+        const allUsers = await LaudoDB.getUsers();
+
+        // Populate Author Select filter
+        if (authorSelect) {
+            const authors = [...new Set(accessibleLaudos.map(l => l.authorId))];
+            let optionsHTML = '<option value="">Todos os Responsáveis</option>';
+            authors.forEach(authId => {
+                const usr = allUsers.find(u => u.id === authId);
+                if (usr) {
+                    optionsHTML += `<option value="${usr.id}">${usr.name}</option>`;
+                }
+            });
+            authorSelect.innerHTML = optionsHTML;
+        }
+
+        async function filterAndDisplay() {
+            const search = (document.getElementById('filter-search')?.value || '').toLowerCase().trim();
+            const selectedAuthor = document.getElementById('filter-author')?.value || '';
+            const selectedDate = document.getElementById('filter-date')?.value || '';
+
+            const filtered = accessibleLaudos.filter(l => {
+                const matchesSearch = !search || 
+                    (l.relatorio_num && l.relatorio_num.toLowerCase().includes(search)) ||
+                    (l.cliente_fazenda && l.cliente_fazenda.toLowerCase().includes(search)) ||
+                    (l.nome_produto && l.nome_produto.toLowerCase().includes(search)) ||
+                    (l.authorName && l.authorName.toLowerCase().includes(search));
+
+                const matchesAuthor = !selectedAuthor || l.authorId === selectedAuthor;
+                const matchesDate = !selectedDate || l.data_emissao === selectedDate;
+
+                return matchesSearch && matchesAuthor && matchesDate;
+            });
+
+            badge.textContent = filtered.length;
+
+            if (filtered.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="8" style="text-align: center; color: var(--text-muted); padding: 24px;">
+                            <i class="fa-solid fa-folder-open" style="font-size: 24px; margin-bottom: 8px;"></i><br>
+                            Nenhum laudo encontrado no sistema para a sua permissão/filtro.
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            tbody.innerHTML = filtered.map(l => {
+                let roleClass = 'badge-role-consultor';
+                let roleLabel = 'Consultor';
+                if (l.authorRole === 'admin') {
+                    roleClass = 'badge-role-admin';
+                    roleLabel = 'Admin';
+                } else if (l.authorRole === 'coordenador') {
+                    roleClass = 'badge-role-coordenador';
+                    roleLabel = 'Coordenador';
+                }
+
+                const formattedDate = l.data_emissao ? formatDate(l.data_emissao) : '-';
+
+                return `
+                    <tr>
+                        <td><strong>${l.relatorio_num || '-'}</strong></td>
+                        <td>${l.cliente_fazenda || '-'}</td>
+                        <td>${l.nome_produto || '-'}</td>
+                        <td><em style="color: #004d20;">${l.microrganismo || '-'}</em></td>
+                        <td>${formattedDate}</td>
+                        <td>${l.authorName || '-'}</td>
+                        <td><span class="user-role-badge ${roleClass}" style="font-size: 8px;">${roleLabel}</span></td>
+                        <td style="text-align: right;">
+                            <div class="table-actions" style="justify-content: flex-end;">
+                                <button type="button" class="btn-sm-action btn-view" onclick="loadLaudoFromRepository('${l.id}')" title="Editar / Carregar">
+                                    <i class="fa-solid fa-pen-to-square"></i> Editar
+                                </button>
+                                <button type="button" class="btn-sm-action btn-print-sm" onclick="printLaudoFromRepository('${l.id}')" title="Imprimir PDF">
+                                    <i class="fa-solid fa-print"></i> PDF
+                                </button>
+                                <button type="button" class="btn-sm-action btn-del" onclick="deleteLaudoFromRepository('${l.id}')" title="Excluir">
+                                    <i class="fa-solid fa-trash"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        document.getElementById('filter-search')?.addEventListener('input', filterAndDisplay);
+        document.getElementById('filter-author')?.addEventListener('change', filterAndDisplay);
+        document.getElementById('filter-date')?.addEventListener('change', filterAndDisplay);
+
+        filterAndDisplay();
+    }
+
+    window.loadLaudoFromRepository = async function(id) {
+        const laudos = await LaudoDB.getLaudos();
+        const found = laudos.find(l => l.id === id);
+        if (found && found.formData) {
+            currentEditingLaudoId = found.id;
+            loadFormState(found.formData);
+            closeModal('modal-laudos');
+            showToast(`Laudo Nº ${found.relatorio_num} carregado no editor!`, 'success');
+        }
+    };
+
+    window.printLaudoFromRepository = async function(id) {
+        const laudos = await LaudoDB.getLaudos();
+        const found = laudos.find(l => l.id === id);
+        if (found && found.formData) {
+            currentEditingLaudoId = found.id;
+            loadFormState(found.formData);
+            closeModal('modal-laudos');
+            setTimeout(() => window.print(), 300);
+        }
+    };
+
+    window.deleteLaudoFromRepository = async function(id) {
+        if (confirm("Tem certeza que deseja excluir este laudo permanentemente?")) {
+            await LaudoDB.deleteLaudo(id);
+            showToast("Laudo removido com sucesso.", 'info');
+            renderLaudosRepository();
+        }
+    };
+
+    // ----------------------------------------------------
+    // User Management (Admin Only)
+    // ----------------------------------------------------
+    async function renderUsersManagement() {
+        const tbody = document.getElementById('users-table-body');
+        const coordSelect = document.getElementById('user-input-coord');
+        if (!tbody) return;
+
+        const users = await LaudoDB.getUsers();
+
+        // Populate Coordinators select box
+        if (coordSelect) {
+            const coords = users.filter(u => u.role === 'coordenador');
+            coordSelect.innerHTML = '<option value="">Nenhum (Independente)</option>' +
+                coords.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+        }
+
+        tbody.innerHTML = users.map(u => {
+            let roleClass = 'badge-role-consultor';
+            let roleLabel = 'Consultor';
+            if (u.role === 'admin') {
+                roleClass = 'badge-role-admin';
+                roleLabel = 'Admin Principal';
+            } else if (u.role === 'coordenador') {
+                roleClass = 'badge-role-coordenador';
+                roleLabel = 'Coordenador';
+            }
+
+            let coordName = '-';
+            if (u.coordinatorId) {
+                const c = users.find(x => x.id === u.coordinatorId);
+                if (c) coordName = c.name;
+            }
+
+            return `
+                <tr>
+                    <td><strong>${u.name}</strong></td>
+                    <td>${u.email}</td>
+                    <td><span class="user-role-badge ${roleClass}">${roleLabel}</span></td>
+                    <td>${coordName}</td>
+                    <td style="text-align: right;">
+                        <div class="table-actions" style="justify-content: flex-end;">
+                            <button type="button" class="btn-sm-action btn-view" onclick="editUserFromTable('${u.id}')" title="Editar">
+                                <i class="fa-solid fa-pen"></i> Editar
+                            </button>
+                            ${u.role !== 'admin' ? `
+                                <button type="button" class="btn-sm-action btn-del" onclick="deleteUserFromTable('${u.id}')" title="Excluir">
+                                    <i class="fa-solid fa-trash"></i> Excluir
+                                </button>
+                            ` : ''}
+                        </div>
+                    </td>
+                </tr>
+            `;
+        }).join('');
+    }
+
+    window.editUserFromTable = async function(id) {
+        const users = await LaudoDB.getUsers();
+        const found = users.find(u => u.id === id);
+        if (!found) return;
+
+        document.getElementById('user-form-title').textContent = 'Editar Usuário';
+        document.getElementById('user-edit-id').value = found.id;
+        document.getElementById('user-input-name').value = found.name;
+        document.getElementById('user-input-email').value = found.email;
+        document.getElementById('user-input-pass').value = found.password;
+        document.getElementById('user-input-role').value = found.role;
+        document.getElementById('user-input-coord').value = found.coordinatorId || '';
+
+        toggleGroupCoordSelect();
+        document.getElementById('form-user-edit').classList.remove('hidden');
+    };
+
+    window.deleteUserFromTable = async function(id) {
+        if (confirm("Tem certeza que deseja excluir este usuário?")) {
+            await LaudoDB.deleteUser(id);
+            showToast("Usuário removido com sucesso.", 'info');
+            renderUsersManagement();
+        }
+    };
+
+    const formUserEdit = document.getElementById('form-user-edit');
+    const roleSelect = document.getElementById('user-input-role');
+
+    function toggleGroupCoordSelect() {
+        const group = document.getElementById('group-coord-select');
+        if (group && roleSelect) {
+            group.style.display = (roleSelect.value === 'consultor') ? 'block' : 'none';
+        }
+    }
+
+    if (roleSelect) {
+        roleSelect.addEventListener('change', toggleGroupCoordSelect);
+    }
+
+    document.getElementById('btn-show-add-user')?.addEventListener('click', () => {
+        document.getElementById('user-form-title').textContent = 'Cadastrar Novo Usuário';
+        document.getElementById('user-edit-id').value = '';
+        document.getElementById('user-input-name').value = '';
+        document.getElementById('user-input-email').value = '';
+        document.getElementById('user-input-pass').value = '123';
+        document.getElementById('user-input-role').value = 'consultor';
+        document.getElementById('user-input-coord').value = '';
+        toggleGroupCoordSelect();
+        document.getElementById('form-user-edit').classList.remove('hidden');
+    });
+
+    document.getElementById('btn-cancel-user')?.addEventListener('click', () => {
+        document.getElementById('form-user-edit').classList.add('hidden');
+    });
+
+    if (formUserEdit) {
+        formUserEdit.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const editId = document.getElementById('user-edit-id').value;
+            const name = document.getElementById('user-input-name').value;
+            const email = document.getElementById('user-input-email').value;
+            const pass = document.getElementById('user-input-pass').value;
+            const role = document.getElementById('user-input-role').value;
+            const coordId = document.getElementById('user-input-coord').value || null;
+
+            const newUser = {
+                id: editId || ('usr_' + Date.now()),
+                name,
+                email,
+                password: pass,
+                role,
+                coordinatorId: role === 'consultor' ? coordId : null
+            };
+
+            await LaudoDB.saveUser(newUser);
+            document.getElementById('form-user-edit').classList.add('hidden');
+            showToast(`Usuário ${name} salvo com sucesso!`, 'success');
+            renderUsersManagement();
+        });
+    }
+
+    // ----------------------------------------------------
+    // Team View (Coordinator Only)
+    // ----------------------------------------------------
+    async function renderTeamView() {
+        const tbody = document.getElementById('team-table-body');
+        if (!tbody) return;
+
+        const currentUser = AuthManager.getCurrentUser();
+        if (!currentUser || currentUser.role !== 'coordenador') return;
+
+        const allUsers = await LaudoDB.getUsers();
+        const team = allUsers.filter(u => u.role === 'consultor' && u.coordinatorId === currentUser.id);
+        const laudos = await LaudoDB.getLaudos();
+
+        if (team.length === 0) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="4" style="text-align: center; color: var(--text-muted); padding: 20px;">
+                        Nenhum consultor vinculado a sua coordenação até o momento.
+                    </td>
+                </tr>
+            `;
+            return;
+        }
+
+        tbody.innerHTML = team.map(c => {
+            const count = laudos.filter(l => l.authorId === c.id).length;
+            return `
+                <tr>
+                    <td><strong>${c.name}</strong></td>
+                    <td>${c.email}</td>
+                    <td style="text-align: center;"><strong>${count}</strong> laudos</td>
+                    <td style="text-align: right;">
+                        <button type="button" class="btn-sm-action btn-view" onclick="openConsultantLaudos('${c.id}')">
+                            <i class="fa-solid fa-folder-open"></i> Ver Laudos
+                        </button>
+                    </td>
+                </tr>
+            `;
+        }).join('');
+    }
+
+    window.openConsultantLaudos = function(consultantId) {
+        closeModal('modal-equipe');
+        openModal('modal-laudos');
+        renderLaudosRepository();
+        setTimeout(() => {
+            const authorSelect = document.getElementById('filter-author');
+            if (authorSelect) {
+                authorSelect.value = consultantId;
+                authorSelect.dispatchEvent(new Event('change'));
+            }
+        }, 200);
+    };
+
+    // ----------------------------------------------------
+    // Toast Notification System
+    // ----------------------------------------------------
+    function showToast(message, type = 'success') {
+        const container = document.getElementById('toast-container');
+        if (!container) return;
+
+        const toast = document.createElement('div');
+        toast.className = `toast toast-${type}`;
+
+        let icon = 'fa-circle-check';
+        if (type === 'error') icon = 'fa-circle-xmark';
+        if (type === 'info') icon = 'fa-circle-info';
+
+        toast.innerHTML = `<i class="fa-solid ${icon}"></i> <span>${message}</span>`;
+        container.appendChild(toast);
+
+        setTimeout(() => {
+            toast.style.opacity = '0';
+            toast.style.transform = 'translateY(10px)';
+            setTimeout(() => toast.remove(), 300);
+        }, 3500);
+    }
+
+    // Initialize Application Auth & Session State
     loadFromLocalStorage();
+    renderUserSessionBar();
     updateZoom();
 });
