@@ -1124,7 +1124,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Populate Client Select Box with User's Personal Clients
+    // Populate Client Select Box strictly with User's Personal Clients
     async function populateClientDropdown() {
         const user = AuthManager.getCurrentUser();
         if (!user) return;
@@ -1137,19 +1137,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const currentValue = select.value;
 
-        // Base options
-        const defaultOptions = [
-            'Gilson Adriano Bomfim - Fazenda Sagrada Fámilia',
-            'Marcelo Isoton - Fazenda Reaconquista II',
-            'SLC- Fazenda Pamplona I',
-            'Lauri Pooz - Fazenda Sete Irmão',
-            'Marcus Vinicius - Fazenda Aroeira',
-            'Flávio Gilberto Kist - Fazenda Cupim',
-            'Irineu Renato - Fazenda Pérola do Sul',
-            'Agrícola Werhmann',
-            'Willian Matté - Grupo MEC'
-        ];
-
         let html = '<option value="" disabled selected>Selecione um Cliente / Fazenda</option>';
 
         if (myClients.length > 0) {
@@ -1158,15 +1145,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 html += `<option value="${c.name}">${c.name}</option>`;
             });
             html += '</optgroup>';
+        } else {
+            html += '<option value="" disabled>Nenhum cliente cadastrado ainda. Adicione o 1º cliente!</option>';
         }
-
-        html += '<optgroup label="📋 Clientes Padrão Solubio">';
-        defaultOptions.forEach(opt => {
-            if (!myClients.some(c => c.name === opt)) {
-                html += `<option value="${opt}">${opt}</option>`;
-            }
-        });
-        html += '</optgroup>';
 
         html += '<option value="Outro">Outro...</option>';
 

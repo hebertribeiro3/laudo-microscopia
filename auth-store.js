@@ -4,7 +4,7 @@
  */
 
 const LaudoDB = (function () {
-    const DB_NAME = 'SolubioLaudosDB_v4';
+    const DB_NAME = 'SolubioLaudosDB_v5';
     const DB_VERSION = 1;
     let dbInstance = null;
 
@@ -44,12 +44,17 @@ const LaudoDB = (function () {
         }
     ];
 
-    // Clientes/Fazendas Iniciais
+    // Clientes/Fazendas Iniciais da Planilha (Atribuídos exclusivamente ao Admin Hebert Souza)
     const DEFAULT_CLIENTS = [
         { id: 'cli_1', userId: 'usr_admin', name: 'Gilson Adriano Bomfim - Fazenda Sagrada Fámilia' },
-        { id: 'cli_2', userId: 'usr_coord_bruna', name: 'Marcelo Isoton - Fazenda Reaconquista II' },
-        { id: 'cli_3', userId: 'usr_cons_joao', name: 'SLC- Fazenda Pamplona I' },
-        { id: 'cli_4', userId: 'usr_cons_maria', name: 'Lauri Pooz - Fazenda Sete Irmão' }
+        { id: 'cli_2', userId: 'usr_admin', name: 'Marcelo Isoton - Fazenda Reaconquista II' },
+        { id: 'cli_3', userId: 'usr_admin', name: 'SLC- Fazenda Pamplona I' },
+        { id: 'cli_4', userId: 'usr_admin', name: 'Lauri Pooz - Fazenda Sete Irmão' },
+        { id: 'cli_5', userId: 'usr_admin', name: 'Marcus Vinicius - Fazenda Aroeira' },
+        { id: 'cli_6', userId: 'usr_admin', name: 'Flávio Gilberto Kist - Fazenda Cupim' },
+        { id: 'cli_7', userId: 'usr_admin', name: 'Irineu Renato - Fazenda Pérola do Sul' },
+        { id: 'cli_8', userId: 'usr_admin', name: 'Agrícola Werhmann' },
+        { id: 'cli_9', userId: 'usr_admin', name: 'Willian Matté - Grupo MEC' }
     ];
 
     // Laudos Iniciais de Exemplo para Demonstração de Hierarquia
@@ -352,7 +357,7 @@ const LaudoDB = (function () {
  * Gerenciador de Autenticação e Sessão
  */
 const AuthManager = (function () {
-    const CURRENT_USER_KEY = 'solubio_current_user_v4';
+    const CURRENT_USER_KEY = 'solubio_current_user_v5';
     let currentUser = null;
 
     function init() {
