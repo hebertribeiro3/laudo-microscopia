@@ -461,9 +461,11 @@ document.addEventListener('DOMContentLoaded', () => {
     form.addEventListener('input', updatePreview);
     form.addEventListener('change', updatePreview);
 
-    // Print event
+    // Gerar Laudo Event (Auto-Salva no Repositório + Abre Impressão PDF)
     btnPrint.addEventListener('click', async () => {
-        await saveCurrentLaudo(false);
+        const laudoRecord = await saveCurrentLaudo(true);
+        if (!laudoRecord) return; // Se não estiver logado, modal abre e interrompe impressão
+
         const originalZoom = zoomLevel;
         zoomLevel = 100;
         updateZoom();
@@ -473,14 +475,6 @@ document.addEventListener('DOMContentLoaded', () => {
             updateZoom();
         }, 500);
     });
-
-    // Save Laudo button event
-    const btnSaveLaudo = document.getElementById('btn-save-laudo');
-    if (btnSaveLaudo) {
-        btnSaveLaudo.addEventListener('click', async () => {
-            await saveCurrentLaudo(true);
-        });
-    }
 
     // Reset Form
     btnReset.addEventListener('click', () => {
