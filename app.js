@@ -836,35 +836,10 @@ document.addEventListener('DOMContentLoaded', () => {
     // Modal Helpers & Handlers
     // ----------------------------------------------------
     // ----------------------------------------------------
-    // ANTI-BOT & SECURITY SYSTEM (CAPTCHA, HONEYPOT, RATE LIMITING)
+    // AUTHENTICATION & SECURITY SYSTEM
     // ----------------------------------------------------
-    let captchaLoginTarget = 0;
-    let captchaRegTarget = 0;
     let failedLoginAttempts = 0;
     let lockoutUntil = 0;
-
-    function generateCaptcha(type) {
-        const num1 = Math.floor(Math.random() * 8) + 2;
-        const num2 = Math.floor(Math.random() * 9) + 1;
-        const sum = num1 + num2;
-        
-        if (type === 'login') {
-            captchaLoginTarget = sum;
-            const label = document.getElementById('captcha-login-question');
-            if (label) label.textContent = `${num1} + ${num2}`;
-            const input = document.getElementById('captcha-login-answer');
-            if (input) input.value = '';
-        } else if (type === 'reg') {
-            captchaRegTarget = sum;
-            const label = document.getElementById('captcha-reg-question');
-            if (label) label.textContent = `${num1} + ${num2}`;
-            const input = document.getElementById('captcha-reg-answer');
-            if (input) input.value = '';
-        }
-    }
-
-    document.getElementById('btn-refresh-captcha-login')?.addEventListener('click', () => generateCaptcha('login'));
-    document.getElementById('btn-refresh-captcha-reg')?.addEventListener('click', () => generateCaptcha('reg'));
 
     async function populateRegisterCoordinators() {
         const select = document.getElementById('reg-coordinator');
@@ -882,8 +857,6 @@ document.addEventListener('DOMContentLoaded', () => {
             el.classList.add('active');
             if (id === 'modal-login') {
                 populateRegisterCoordinators();
-                generateCaptcha('login');
-                generateCaptcha('reg');
             }
         }
     }
@@ -908,7 +881,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    // Auth Tab Switching (Entrar vs Cadastrar Consultor)
+    // Auth Segmented Control Tab Switching (Entrar vs Novo Consultor)
     const tabLoginBtn = document.getElementById('tab-login-btn');
     const tabRegisterBtn = document.getElementById('tab-register-btn');
     const formLogin = document.getElementById('form-login');
@@ -916,28 +889,44 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (tabLoginBtn && tabRegisterBtn) {
         tabLoginBtn.addEventListener('click', () => {
-            tabLoginBtn.style.color = 'var(--solubio-dark)';
-            tabLoginBtn.style.borderBottom = '2px solid var(--solubio-dark)';
-            tabRegisterBtn.style.color = 'var(--text-secondary)';
-            tabRegisterBtn.style.borderBottom = 'none';
+            tabLoginBtn.classList.add('active');
+            tabRegisterBtn.classList.remove('active');
 
             formLogin.classList.remove('hidden');
             formRegister.classList.add('hidden');
-            generateCaptcha('login');
         });
 
         tabRegisterBtn.addEventListener('click', () => {
-            tabRegisterBtn.style.color = 'var(--solubio-dark)';
-            tabRegisterBtn.style.borderBottom = '2px solid var(--solubio-dark)';
-            tabLoginBtn.style.color = 'var(--text-secondary)';
-            tabLoginBtn.style.borderBottom = 'none';
+            tabRegisterBtn.classList.add('active');
+            tabLoginBtn.classList.remove('active');
 
             formRegister.classList.remove('hidden');
             formLogin.classList.add('hidden');
             populateRegisterCoordinators();
-            generateCaptcha('reg');
         });
     }
+
+    // Toggle Password Visibility (Eye Icon)
+    document.querySelectorAll('.toggle-password-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const btnTarget = e.currentTarget;
+            const targetId = btnTarget.getAttribute('data-target');
+            const input = document.getElementById(targetId);
+            const icon = btnTarget.querySelector('i');
+
+            if (input && icon) {
+                if (input.type === 'password') {
+                    input.type = 'text';
+                    icon.classList.remove('fa-eye');
+                    icon.classList.add('fa-eye-slash');
+                } else {
+                    input.type = 'password';
+                    icon.classList.remove('fa-eye-slash');
+                    icon.classList.add('fa-eye');
+                }
+            }
+        });
+    });
 
     // Login Form Handler
     if (formLogin) {
@@ -947,45 +936,36 @@ document.addEventListener('DOMContentLoaded', () => {
             // 1. Verificação de Armadilha Honeypot
             const hpVal = document.getElementById('login-hp')?.value;
             if (hpVal && hpVal.trim() !== '') {
-                showToast('Acesso Bloqueado: Atividade automatizada de robô/bot detectada!', 'error');
+                showToast('Acesso Bloqueado: Atividade automatizada detectada.', 'error');
                 return;
             }
 
             // 2. Verificação de Bloqueio por Força Bruta
             if (Date.now() < lockoutUntil) {
                 const remaining = Math.ceil((lockoutUntil - Date.now()) / 1000);
-                showToast(`Acesso temporariamente bloqueado por segurança! Tente em ${remaining} segundos.`, 'error');
+                showToast(`Acesso bloqueado temporariamente! Tente em ${remaining} segundos.`, 'error');
                 return;
             }
 
-            // 3. Verificação do Desafio CAPTCHA
-            const userAnswer = parseInt(document.getElementById('captcha-login-answer')?.value, 10);
-            if (isNaN(userAnswer) || userAnswer !== captchaLoginTarget) {
-                failedLoginAttempts++;
-                if (failedLoginAttempts >= 4) {
-                    lockoutUntil = Date.now() + 30000;
-                    showToast('Múltiplas falhas! Acesso bloqueado por 30s contra ataques de força bruta.', 'error');
-                } else {
-                    showToast('Resultado da validação anti-robô incorreto! Tente novamente.', 'error');
-                }
-                generateCaptcha('login');
-                return;
-            }
-
-            failedLoginAttempts = 0;
             const email = document.getElementById('login-email').value;
             const pass = document.getElementById('login-password').value;
             
             const res = await AuthManager.login(email, pass);
             if (res.success) {
+                failedLoginAttempts = 0;
                 closeModal('modal-login');
                 renderUserSessionBar();
                 setPredefinedDefaults();
                 showToast(`Bem-vindo, ${res.user.name}!`, 'success');
                 checkFirstLoginClients();
             } else {
-                showToast(res.message, 'error');
-                generateCaptcha('login');
+                failedLoginAttempts++;
+                if (failedLoginAttempts >= 5) {
+                    lockoutUntil = Date.now() + 30000;
+                    showToast('Múltiplas falhas! Acesso bloqueado por 30 segundos por segurança.', 'error');
+                } else {
+                    showToast(res.message, 'error');
+                }
             }
         });
     }
@@ -998,15 +978,7 @@ document.addEventListener('DOMContentLoaded', () => {
             // 1. Verificação de Armadilha Honeypot
             const hpVal = document.getElementById('reg-hp')?.value;
             if (hpVal && hpVal.trim() !== '') {
-                showToast('Cadastro Bloqueado: Atividade automatizada de robô/bot detectada!', 'error');
-                return;
-            }
-
-            // 2. Verificação do Desafio CAPTCHA
-            const userAnswer = parseInt(document.getElementById('captcha-reg-answer')?.value, 10);
-            if (isNaN(userAnswer) || userAnswer !== captchaRegTarget) {
-                showToast('Resultado da validação anti-robô incorreto! Tente novamente.', 'error');
-                generateCaptcha('reg');
+                showToast('Cadastro Bloqueado: Atividade automatizada detectada.', 'error');
                 return;
             }
 
@@ -1024,7 +996,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 checkFirstLoginClients();
             } else {
                 showToast(res.message, 'error');
-                generateCaptcha('reg');
             }
         });
     }
@@ -1034,9 +1005,6 @@ document.addEventListener('DOMContentLoaded', () => {
         btn.addEventListener('click', async () => {
             const email = btn.getAttribute('data-email');
             
-            const inputCaptcha = document.getElementById('captcha-login-answer');
-            if (inputCaptcha) inputCaptcha.value = captchaLoginTarget;
-
             const res = await AuthManager.login(email, '123');
             if (res.success) {
                 closeModal('modal-login');

@@ -692,148 +692,111 @@
 
     </div>
 
-    <!-- MODAL 1: LOGIN E SELEÇÃO DE PERFIL DE ACESSO -->
+    <!-- MODAL 1: LOGIN E AUTENTICAÇÃO -->
     <div class="modal-overlay" id="modal-login">
-        <div class="modal-card">
-            <div class="modal-header">
-                <div class="modal-title">
-                    <i class="fa-solid fa-shield-halved"></i> Solubio On Farm - Autenticação
-                </div>
+        <div class="modal-card login-modal-card">
+            <!-- Top Banner Header -->
+            <div class="login-card-header">
+                <img src="banner-header.png" alt="Solubio On Farm">
+                <h2>Sistema de Laudos</h2>
+                <p>Gestão Microbiológica & Controle de Qualidade</p>
             </div>
-            
-            <!-- Auth Toggle Tabs -->
-            <div style="display: flex; background: #f1f5f9; border-bottom: 1px solid var(--border-color);">
-                <button type="button" id="tab-login-btn" class="auth-tab active" style="flex: 1; padding: 10px; border: none; background: transparent; font-weight: 700; font-size: 12px; cursor: pointer; color: var(--solubio-dark); border-bottom: 2px solid var(--solubio-dark);">
+
+            <!-- Segmented Control Tabs -->
+            <div class="login-segmented-control">
+                <button type="button" id="tab-login-btn" class="login-segmented-btn active">
                     <i class="fa-solid fa-right-to-bracket"></i> Entrar
                 </button>
-                <button type="button" id="tab-register-btn" class="auth-tab" style="flex: 1; padding: 10px; border: none; background: transparent; font-weight: 700; font-size: 12px; cursor: pointer; color: var(--text-secondary);">
-                    <i class="fa-solid fa-user-plus"></i> Cadastrar Consultor
+                <button type="button" id="tab-register-btn" class="login-segmented-btn">
+                    <i class="fa-solid fa-user-plus"></i> Novo Consultor
                 </button>
             </div>
 
-            <!-- Login Form -->
+            <!-- LOGIN FORM -->
             <form id="form-login">
-                <!-- Campo Armadilha (Honeypot Anti-Robô) -->
+                <!-- Honeypot Trap -->
                 <input type="text" name="website_url_hp" id="login-hp" style="display:none !important; visibility:hidden !important; position:absolute !important; left:-9999px !important;" tabindex="-1" autocomplete="off">
 
-                <div class="modal-body">
-                    <div style="text-align: center; margin-bottom: 14px;">
-                        <img src="banner-header.png" style="max-height: 40px; width: auto;" alt="Solubio">
-                        <h3 style="font-size: 15px; margin-top: 6px; color: var(--solubio-dark);">Acesso ao Sistema de Laudos</h3>
-                        <div style="display: inline-flex; align-items: center; gap: 4px; font-size: 10px; color: #047857; background: #ecfdf5; padding: 3px 8px; border-radius: 12px; margin-top: 4px; border: 1px solid #a7f3d0;">
-                            <i class="fa-solid fa-shield-halved"></i> Sistema Blindado contra Robôs & Força Bruta
+                <div class="modal-body" style="padding: 20px 24px;">
+                    <div class="form-group mb-3">
+                        <label for="login-email" style="font-weight: 700; font-size: 11px; color: var(--text-secondary);">E-MAIL DE ACESSO</label>
+                        <div class="input-with-icon">
+                            <i class="fa-solid fa-envelope input-icon-left"></i>
+                            <input type="email" id="login-email" placeholder="seu.email@solubio.agr.br" required autocomplete="username">
                         </div>
                     </div>
 
-                    <div class="form-group mb-2">
-                        <label for="login-email">E-mail de Acesso</label>
-                        <input type="email" id="login-email" class="form-control" placeholder="hebert.souza@solubio.agr.br" required>
-                    </div>
-
-                    <div class="form-group mb-2">
-                        <label for="login-password">Senha</label>
-                        <input type="password" id="login-password" class="form-control" placeholder="••••••••" required>
-                    </div>
-
-                    <!-- DESAFIO CAPTCHA ANTI-ROBÔ -->
-                    <div class="captcha-box mb-3" style="padding: 10px 12px; background: #f8fafc; border-radius: 8px; border: 1px solid var(--border-color);">
-                        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
-                            <label for="captcha-login-answer" style="font-size: 11px; font-weight: 700; color: var(--solubio-dark); margin: 0; display: flex; align-items: center; gap: 6px;">
-                                <i class="fa-solid fa-robot" style="color: #e25b26;"></i> Validação Humana: quanto é <span id="captcha-login-question" style="font-size: 13px; font-weight: 800; color: #003e15; background: #e2e8f0; padding: 2px 6px; border-radius: 4px;">?</span>
-                            </label>
-                            <button type="button" id="btn-refresh-captcha-login" class="btn-icon" title="Trocar Desafio" style="background: none; border: none; cursor: pointer; color: var(--text-secondary); font-size: 12px;">
-                                <i class="fa-solid fa-rotate-right"></i>
-                            </button>
-                        </div>
-                        <input type="number" id="captcha-login-answer" class="form-control" placeholder="Digite o resultado" required style="padding: 6px 10px; font-size: 12px;">
-                    </div>
-
-                    <!-- Botões de Acesso Rápido de Demonstração -->
-                    <div class="demo-access-box">
-                        <div class="demo-access-title">
-                            <i class="fa-solid fa-bolt"></i> Atalho de Acesso Rápido (Demonstração)
-                        </div>
-                        <div class="demo-access-grid">
-                            <button type="button" class="btn-demo-user demo-admin" data-email="hebert.souza@solubio.agr.br">
-                                <span style="font-size: 16px;">👑</span>
-                                <span>Nível 1 (Admin)</span>
-                                <span style="font-size: 8.5px; opacity: 0.85;">Hebert Souza</span>
-                            </button>
-                            <button type="button" class="btn-demo-user demo-coord" data-email="bruna.carneiro@solubio.agr.br">
-                                <span style="font-size: 16px;">👔</span>
-                                <span>Nível 2 (Coord.)</span>
-                                <span style="font-size: 8.5px; opacity: 0.85;">Bruna Carneiro</span>
-                            </button>
-                            <button type="button" class="btn-demo-user demo-cons" data-email="joao.consultor@solubio.agr.br">
-                                <span style="font-size: 16px;">🔬</span>
-                                <span>Nível 3 (Consultor)</span>
-                                <span style="font-size: 8.5px; opacity: 0.85;">João Silva</span>
+                    <div class="form-group mb-4">
+                        <label for="login-password" style="font-weight: 700; font-size: 11px; color: var(--text-secondary);">SENHA</label>
+                        <div class="input-with-icon">
+                            <i class="fa-solid fa-lock input-icon-left"></i>
+                            <input type="password" id="login-password" placeholder="••••••••" required autocomplete="current-password">
+                            <button type="button" class="toggle-password-btn" data-target="login-password" title="Mostrar/Ocultar Senha">
+                                <i class="fa-regular fa-eye"></i>
                             </button>
                         </div>
                     </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="submit" class="btn-primary btn-block btn-lg">
-                        <i class="fa-solid fa-right-to-bracket"></i> Entrar no Sistema
+
+                    <button type="submit" class="btn-login-submit">
+                        <i class="fa-solid fa-right-to-bracket"></i> ACESSAR SISTEMA
                     </button>
                 </div>
             </form>
 
-            <!-- Auto-Cadastro de Consultores Form -->
+            <!-- CONSULTANT AUTO-REGISTRATION FORM -->
             <form id="form-register-consultant" class="hidden">
-                <!-- Campo Armadilha (Honeypot Anti-Robô) -->
+                <!-- Honeypot Trap -->
                 <input type="text" name="website_url_hp" id="reg-hp" style="display:none !important; visibility:hidden !important; position:absolute !important; left:-9999px !important;" tabindex="-1" autocomplete="off">
 
-                <div class="modal-body">
-                    <div style="text-align: center; margin-bottom: 12px;">
-                        <h4 style="font-size: 15px; color: var(--solubio-dark);">Cadastro de Novo Consultor</h4>
-                        <p style="font-size: 11px; color: var(--text-secondary); margin-bottom: 4px;">Crie sua conta para gerenciar e salvar seus laudos microbiológicos.</p>
-                        <div style="display: inline-flex; align-items: center; gap: 4px; font-size: 10px; color: #047857; background: #ecfdf5; padding: 3px 8px; border-radius: 12px; border: 1px solid #a7f3d0;">
-                            <i class="fa-solid fa-shield-cat"></i> Verificação Anti-Bot em Tempo Real
+                <div class="modal-body" style="padding: 20px 24px;">
+                    <div class="form-group mb-2">
+                        <label for="reg-name" style="font-weight: 700; font-size: 11px; color: var(--text-secondary);">NOME COMPLETO</label>
+                        <div class="input-with-icon">
+                            <i class="fa-solid fa-user input-icon-left"></i>
+                            <input type="text" id="reg-name" required placeholder="Ex: Rogério Castro">
                         </div>
                     </div>
 
                     <div class="form-group mb-2">
-                        <label for="reg-name">Nome Completo</label>
-                        <input type="text" id="reg-name" required placeholder="Ex: Rogério Castro">
+                        <label for="reg-email" style="font-weight: 700; font-size: 11px; color: var(--text-secondary);">E-MAIL PROFISSIONAL</label>
+                        <div class="input-with-icon">
+                            <i class="fa-solid fa-envelope input-icon-left"></i>
+                            <input type="email" id="reg-email" required placeholder="rogerio@solubio.agr.br">
+                        </div>
                     </div>
 
                     <div class="form-group mb-2">
-                        <label for="reg-email">E-mail Profissional</label>
-                        <input type="email" id="reg-email" required placeholder="rogerio@solubio.agr.br">
-                    </div>
-
-                    <div class="form-group mb-2">
-                        <label for="reg-password">Senha de Acesso</label>
-                        <input type="password" id="reg-password" required placeholder="Crie sua senha">
-                    </div>
-
-                    <div class="form-group mb-2">
-                        <label for="reg-coordinator">Seu Coordenador Responsável</label>
-                        <select id="reg-coordinator" required>
-                            <!-- Preenchido via JS -->
-                        </select>
-                    </div>
-
-                    <!-- DESAFIO CAPTCHA ANTI-ROBÔ -->
-                    <div class="captcha-box mb-2" style="padding: 10px 12px; background: #f8fafc; border-radius: 8px; border: 1px solid var(--border-color);">
-                        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
-                            <label for="captcha-reg-answer" style="font-size: 11px; font-weight: 700; color: var(--solubio-dark); margin: 0; display: flex; align-items: center; gap: 6px;">
-                                <i class="fa-solid fa-shield-cat" style="color: #10b981;"></i> Validação Humana: quanto é <span id="captcha-reg-question" style="font-size: 13px; font-weight: 800; color: #003e15; background: #e2e8f0; padding: 2px 6px; border-radius: 4px;">?</span>
-                            </label>
-                            <button type="button" id="btn-refresh-captcha-reg" class="btn-icon" title="Trocar Desafio" style="background: none; border: none; cursor: pointer; color: var(--text-secondary); font-size: 12px;">
-                                <i class="fa-solid fa-rotate-right"></i>
+                        <label for="reg-password" style="font-weight: 700; font-size: 11px; color: var(--text-secondary);">CRIAR SENHA</label>
+                        <div class="input-with-icon">
+                            <i class="fa-solid fa-lock input-icon-left"></i>
+                            <input type="password" id="reg-password" required placeholder="Crie uma senha segura">
+                            <button type="button" class="toggle-password-btn" data-target="reg-password" title="Mostrar/Ocultar Senha">
+                                <i class="fa-regular fa-eye"></i>
                             </button>
                         </div>
-                        <input type="number" id="captcha-reg-answer" class="form-control" placeholder="Digite o resultado" required style="padding: 6px 10px; font-size: 12px;">
                     </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="submit" class="btn-primary btn-block btn-lg" style="background: linear-gradient(135deg, #10b981, #059669);">
-                        <i class="fa-solid fa-user-check"></i> Finalizar Cadastro e Entrar
+
+                    <div class="form-group mb-4">
+                        <label for="reg-coordinator" style="font-weight: 700; font-size: 11px; color: var(--text-secondary);">COORDENADOR RESPONSÁVEL</label>
+                        <div class="input-with-icon">
+                            <i class="fa-solid fa-user-tie input-icon-left"></i>
+                            <select id="reg-coordinator" required>
+                                <!-- Preenchido via JS -->
+                            </select>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn-login-submit" style="background: linear-gradient(135deg, #10b981, #059669);">
+                        <i class="fa-solid fa-user-check"></i> CADASTRAR E ENTRAR
                     </button>
                 </div>
             </form>
+
+            <div class="login-modal-footer">
+                <i class="fa-solid fa-shield-halved" style="color: #10b981; margin-right: 4px;"></i> Solubio On Farm • Tecnologia & Qualidade Microbiológica
+            </div>
+        </div>
+    </div>
         </div>
     </div>
 
