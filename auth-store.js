@@ -323,11 +323,41 @@ const FirebaseSync = (function () {
         }
     }
 
-    setTimeout(() => initListeners(), 1000);
+    async function pushAllLocalToFirebase() {
+        if (!dbFirebase) return;
+        try {
+            const users = await LaudoDB.getUsersLocal();
+            for (const u of users) {
+                if (u && u.id) {
+                    await dbFirebase.collection('users').doc(u.id).set(u, { merge: true });
+                }
+            }
+            const laudos = await LaudoDB.getLaudosLocal();
+            for (const l of laudos) {
+                if (l && l.id) {
+                    await dbFirebase.collection('laudos').doc(l.id).set(l, { merge: true });
+                }
+            }
+            const clients = await LaudoDB.getClientsLocal();
+            for (const c of clients) {
+                if (c && c.id) {
+                    await dbFirebase.collection('clients').doc(c.id).set(c, { merge: true });
+                }
+            }
+        } catch (e) {
+            console.warn('[Firebase] Erro ao sincronizar dados iniciais:', e);
+        }
+    }
+
+    setTimeout(() => {
+        initListeners();
+        pushAllLocalToFirebase();
+    }, 1000);
 
     return {
         pushItem,
-        removeItem
+        removeItem,
+        pushAllLocalToFirebase
     };
 })();
 
