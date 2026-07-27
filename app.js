@@ -986,7 +986,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 renderUserSessionBar();
                 setPredefinedDefaults();
 
-                if (pass === '123' || res.user.mustChangePassword) {
+                if (res.user.mustChangePassword) {
                     showToast(`Bem-vindo, ${res.user.name}! Por segurança, por favor altere sua senha de acesso inicial.`, 'warning');
                     setTimeout(() => {
                         openModal('modal-change-password');

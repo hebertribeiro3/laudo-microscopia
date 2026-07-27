@@ -16,7 +16,8 @@ const LaudoDB = (function () {
             email: 'hebert.souza@solubio.agr.br',
             password: '123',
             role: 'admin',
-            coordinatorId: null
+            coordinatorId: null,
+            mustChangePassword: true
         },
         {
             id: 'usr_coord_bruna',
@@ -24,7 +25,8 @@ const LaudoDB = (function () {
             email: 'bruna.carneiro@solubio.agr.br',
             password: '123',
             role: 'coordenador',
-            coordinatorId: null
+            coordinatorId: null,
+            mustChangePassword: true
         },
         {
             id: 'usr_cons_joao',
@@ -32,7 +34,8 @@ const LaudoDB = (function () {
             email: 'joao.consultor@solubio.agr.br',
             password: '123',
             role: 'consultor',
-            coordinatorId: 'usr_coord_bruna'
+            coordinatorId: 'usr_coord_bruna',
+            mustChangePassword: true
         },
         {
             id: 'usr_cons_maria',
@@ -40,7 +43,8 @@ const LaudoDB = (function () {
             email: 'maria.consultor@solubio.agr.br',
             password: '123',
             role: 'consultor',
-            coordinatorId: 'usr_coord_bruna'
+            coordinatorId: 'usr_coord_bruna',
+            mustChangePassword: true
         }
     ];
 
