@@ -1463,9 +1463,9 @@ document.addEventListener('DOMContentLoaded', () => {
             let optionsHTML = '<option value="">Todos os Responsáveis</option>';
             authors.forEach(authId => {
                 const usr = allUsers.find(u => u.id === authId);
-                if (usr) {
-                    optionsHTML += `<option value="${usr.id}">${usr.name}</option>`;
-                }
+                const laudoSample = accessibleLaudos.find(l => l.authorId === authId);
+                const name = usr ? usr.name : (laudoSample ? `${laudoSample.authorName} (Ex-Usuário)` : 'Desconhecido');
+                optionsHTML += `<option value="${authId}">${name}</option>`;
             });
             authorSelect.innerHTML = optionsHTML;
         }
@@ -1514,6 +1514,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
 
                 const formattedDate = l.data_emissao ? formatDate(l.data_emissao) : '-';
+                const isUserActive = allUsers.some(u => u.id === l.authorId);
+                const authorDisplay = l.authorName ? (isUserActive ? l.authorName : `${l.authorName} <span style="font-size:10px; color:#64748b;">(Ex-Usuário)</span>`) : '-';
 
                 return `
                     <tr>
@@ -1522,7 +1524,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         <td>${l.nome_produto || '-'}</td>
                         <td><em style="color: #004d20;">${l.microrganismo || '-'}</em></td>
                         <td>${formattedDate}</td>
-                        <td>${l.authorName || '-'}</td>
+                        <td>${authorDisplay}</td>
                         <td><span class="user-role-badge ${roleClass}" style="font-size: 8px;">${roleLabel}</span></td>
                         <td style="text-align: right;">
                             <div class="table-actions" style="justify-content: flex-end;">
