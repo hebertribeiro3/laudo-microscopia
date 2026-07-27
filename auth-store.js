@@ -4,15 +4,15 @@
  */
 
 const LaudoDB = (function () {
-    const DB_NAME = 'SolubioLaudosDB_v5';
+    const DB_NAME = 'SolubioLaudosDB_v6';
     const DB_VERSION = 1;
     let dbInstance = null;
 
-    // Usuários Padrão para Iniciar o Sistema (Nível 1 Admin: hebert.souza@solubio.agr.br | Nível 2 Coordenadora: bruna.carneiro@solubio.agr.br)
+    // Usuários Padrão para Iniciar o Sistema
     const DEFAULT_USERS = [
         {
             id: 'usr_admin',
-            name: 'Hebert Souza (Admin Principal)',
+            name: 'Hebert Souza',
             email: 'hebert.souza@solubio.agr.br',
             password: '123',
             role: 'admin',
@@ -20,7 +20,7 @@ const LaudoDB = (function () {
         },
         {
             id: 'usr_coord_bruna',
-            name: 'Bruna Carneiro (Coordenadora)',
+            name: 'Bruna Carneiro',
             email: 'bruna.carneiro@solubio.agr.br',
             password: '123',
             role: 'coordenador',
@@ -28,7 +28,7 @@ const LaudoDB = (function () {
         },
         {
             id: 'usr_cons_joao',
-            name: 'João Silva (Consultor)',
+            name: 'João Silva',
             email: 'joao.consultor@solubio.agr.br',
             password: '123',
             role: 'consultor',
@@ -36,7 +36,7 @@ const LaudoDB = (function () {
         },
         {
             id: 'usr_cons_maria',
-            name: 'Maria Santos (Consultora)',
+            name: 'Maria Santos',
             email: 'maria.consultor@solubio.agr.br',
             password: '123',
             role: 'consultor',
@@ -68,10 +68,10 @@ const LaudoDB = (function () {
             data_emissao: '2025-02-10',
             data_analise: '2025-02-09',
             authorId: 'usr_cons_joao',
-            authorName: 'João Silva (Consultor)',
+            authorName: 'João Silva',
             authorRole: 'consultor',
             coordinatorId: 'usr_coord_bruna',
-            coordinatorName: 'Bruna Carneiro (Coordenadora)',
+            coordinatorName: 'Bruna Carneiro',
             createdAt: '2025-02-10T10:00:00.000Z',
             formData: {
                 relatorio_num: '041.2025',
@@ -112,10 +112,10 @@ const LaudoDB = (function () {
             data_emissao: '2025-02-12',
             data_analise: '2025-02-11',
             authorId: 'usr_cons_maria',
-            authorName: 'Maria Santos (Consultora)',
+            authorName: 'Maria Santos',
             authorRole: 'consultor',
             coordinatorId: 'usr_coord_bruna',
-            coordinatorName: 'Bruna Carneiro (Coordenadora)',
+            coordinatorName: 'Bruna Carneiro',
             createdAt: '2025-02-12T14:30:00.000Z',
             formData: {
                 relatorio_num: '042.2025',
@@ -156,7 +156,7 @@ const LaudoDB = (function () {
             data_emissao: '2025-02-14',
             data_analise: '2025-02-13',
             authorId: 'usr_coord_bruna',
-            authorName: 'Bruna Carneiro (Coordenadora)',
+            authorName: 'Bruna Carneiro',
             authorRole: 'coordenador',
             coordinatorId: null,
             coordinatorName: null,
@@ -200,7 +200,7 @@ const LaudoDB = (function () {
             data_emissao: '2025-02-15',
             data_analise: '2025-02-15',
             authorId: 'usr_admin',
-            authorName: 'Hebert Souza (Admin Principal)',
+            authorName: 'Hebert Souza',
             authorRole: 'admin',
             coordinatorId: null,
             coordinatorName: null,
@@ -357,7 +357,7 @@ const LaudoDB = (function () {
  * Gerenciador de Autenticação e Sessão
  */
 const AuthManager = (function () {
-    const CURRENT_USER_KEY = 'solubio_current_user_v5';
+    const CURRENT_USER_KEY = 'solubio_current_user_v6';
     let currentUser = null;
 
     function init() {
