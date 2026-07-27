@@ -1512,14 +1512,14 @@ textarea {
     }
 }
 
-/* PRINT RULES - GARANTE EXATAMENTE 1 FOLHA A4 COM RODAPÉ FIXO E IMAGENS AJUSTADAS */
+/* PRINT RULES - GARANTE EXATAMENTE 1 FOLHA A4 MANTENDO O LAYOUT E DESIGN ORIGINAL */
 @media print {
     @page {
         size: A4 portrait;
         margin: 0mm !important;
     }
 
-    /* Ocultar elementos fora da folha */
+    /* Ocultar elementos de UI */
     body * {
         visibility: hidden !important;
     }
@@ -1584,7 +1584,7 @@ textarea {
         box-shadow: none !important;
     }
 
-    /* Estrutura principal da Folha do Laudo em A4 */
+    /* Estrutura principal da Folha do Laudo em A4 (Fiel ao Original) */
     .laudo-sheet {
         display: flex !important;
         flex-direction: column !important;
@@ -1596,7 +1596,7 @@ textarea {
         height: 297mm !important;
         max-width: 210mm !important;
         max-height: 297mm !important;
-        padding: 6mm 10mm 5mm 10mm !important; /* Margens otimizadas para 1 folha */
+        padding: 8mm 12mm !important; /* Margem interna original */
         margin: 0 !important;
         box-shadow: none !important;
         border: none !important;
@@ -1616,13 +1616,13 @@ textarea {
         break-inside: avoid !important;
     }
 
-    /* Banner Superior */
+    /* Banner Superior Original (Largura Total 100%) */
     .laudo-header-banner {
         background-color: transparent !important;
         background-image: none !important;
         width: 100% !important;
         height: auto !important;
-        margin-bottom: 4px !important;
+        margin-bottom: 8px !important;
         overflow: hidden !important;
         display: block !important;
         flex-shrink: 0 !important;
@@ -1634,86 +1634,10 @@ textarea {
         display: block !important;
     }
 
-    .meta-section {
-        margin-bottom: 5px !important;
-        padding: 3px 6px !important;
-        flex-shrink: 0 !important;
-    }
-
-    /* Seções e Tabelas Compactas para Garantir Encaixe */
-    .report-section {
-        margin-bottom: 4px !important;
-        flex-shrink: 0 !important;
-    }
-
-    .report-section.flex-grow {
-        flex: 1 1 auto !important;
-        min-height: 0 !important;
-        margin-bottom: 4px !important;
-    }
-
-    .report-section-header {
-        padding: 3px 6px !important;
-        font-size: 10px !important;
-        margin-bottom: 2px !important;
-    }
-
-    .report-table td {
-        padding: 2.5px 5px !important;
-        font-size: 10px !important;
-        line-height: 1.15 !important;
-    }
-
-    .label-td {
-        background-color: #f2f2f2 !important;
-    }
-
-    .checkbox-container {
-        gap: 2px 8px !important;
-    }
-
-    .checkbox-item {
-        font-size: 9.5px !important;
-    }
-
-    .results-table th {
-        background-color: #f2f2f2 !important;
-        padding: 3px 5px !important;
-        font-size: 10px !important;
-    }
-
-    .results-table td {
-        padding: 4px !important;
-        font-size: 12px !important;
-    }
-
-    /* Fotos da Análise: Fixação de Altura para Não Extrapolar */
-    .photos-container {
-        display: flex !important;
-        gap: 10px !important;
-        margin-top: 2px !important;
-        flex: 1 1 auto !important;
-        min-height: 0 !important;
-    }
-
-    .photo-box {
-        flex: 1 1 50% !important;
-        border: 1px solid #000000 !important;
-        display: flex !important;
-        flex-direction: column !important;
-        min-height: 0 !important;
-    }
-
-    .photo-title {
-        padding: 2px 4px !important;
-        font-size: 9px !important;
-    }
-
+    /* Regulagem da Fotos da Análise para não extrapolar */
     .photo-wrapper {
-        height: 120px !important; /* Altura ideal fixada para não estrapolar página */
-        max-height: 120px !important;
-        min-height: 90px !important;
-        flex: 1 1 auto !important;
+        height: 135px !important; /* Altura regulada para manter 1 folha sem distorcer o layout */
+        max-height: 135px !important;
         background-color: #fafbfc !important;
         display: flex !important;
         align-items: center !important;
@@ -1731,34 +1655,12 @@ textarea {
         display: block !important;
     }
 
-    .photo-placeholder {
-        padding: 4px !important;
-    }
-
-    .photo-placeholder i {
-        font-size: 20px !important;
-        margin-bottom: 2px !important;
-    }
-
-    .photo-placeholder span {
-        font-size: 9px !important;
-    }
-
-    /* Rodapé Fixo no Fim da Página */
+    /* Rodapé Fixo na Parte Inferior */
     .laudo-footer {
         margin-top: auto !important;
-        padding-top: 3px !important;
-        padding-bottom: 0 !important;
+        padding-top: 6px !important;
         flex-shrink: 0 !important;
         width: 100% !important;
-    }
-
-    .footer-divider {
-        margin-bottom: 3px !important;
-    }
-
-    .footer-text {
-        font-size: 8.5px !important;
     }
 }
 
