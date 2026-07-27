@@ -593,9 +593,17 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    function getTodayLocalDate() {
+        const now = new Date();
+        const year = now.getFullYear();
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+        const day = String(now.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    }
+
     function setDefaultDates() {
-        const today = new Date().toISOString().split('T')[0];
-        if (!document.getElementById('data_emissao').value) document.getElementById('data_emissao').value = today;
+        const today = getTodayLocalDate();
+        document.getElementById('data_emissao').value = today; // Sempre garante a data do dia em que abriu o sistema
         if (!document.getElementById('data_coleta').value) document.getElementById('data_coleta').value = today;
         if (!document.getElementById('data_recebimento').value) document.getElementById('data_recebimento').value = today;
         if (!document.getElementById('data_analise').value) document.getElementById('data_analise').value = today;
@@ -805,6 +813,12 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             const state = JSON.parse(stored);
             loadFormState(state);
+            
+            // Sempre garante a data de emissão como a data atual do dia que o sistema é aberto (exceto ao editar um laudo salvo do repositório)
+            if (!currentEditingLaudoId) {
+                document.getElementById('data_emissao').value = getTodayLocalDate();
+            }
+            updatePreview();
         } catch (e) {
             console.error("Erro ao carregar estado do LocalStorage:", e);
             setDefaultDates();
