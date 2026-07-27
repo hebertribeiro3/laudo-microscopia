@@ -466,14 +466,26 @@ document.addEventListener('DOMContentLoaded', () => {
         const laudoRecord = await saveCurrentLaudo(true);
         if (!laudoRecord) return; // Se não estiver logado, modal abre e interrompe impressão
 
+        updatePreview();
+
+        // Se estiver no celular, ativa a aba de preview antes de imprimir
+        if (window.innerWidth <= 992 && appContainer) {
+            appContainer.classList.remove('show-mobile-form');
+            appContainer.classList.add('show-mobile-preview');
+            fitMobileLaudoSheet();
+        }
+
         const originalZoom = zoomLevel;
         zoomLevel = 100;
         updateZoom();
-        window.print();
+
         setTimeout(() => {
-            zoomLevel = originalZoom;
-            updateZoom();
-        }, 500);
+            window.print();
+            setTimeout(() => {
+                zoomLevel = originalZoom;
+                updateZoom();
+            }, 500);
+        }, 300);
     });
 
     // Reset Form
@@ -1533,6 +1545,9 @@ document.addEventListener('DOMContentLoaded', () => {
     window.deleteLaudoFromRepository = async function(id) {
         if (confirm("Tem certeza que deseja excluir este laudo permanentemente?")) {
             await LaudoDB.deleteLaudo(id);
+            if (currentEditingLaudoId === id) {
+                currentEditingLaudoId = null;
+            }
             showToast("Laudo removido com sucesso.", 'info');
             renderLaudosRepository();
         }

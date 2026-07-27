@@ -4,7 +4,7 @@
  */
 
 const LaudoDB = (function () {
-    const DB_NAME = 'SolubioLaudosDB_v6';
+    const DB_NAME = 'SolubioLaudosDB_v7';
     const DB_VERSION = 1;
     let dbInstance = null;
 
@@ -273,7 +273,7 @@ const LaudoDB = (function () {
     }
 
     async function seedInitialData() {
-        const SEED_KEY = 'solubio_db_seeded_v6';
+        const SEED_KEY = 'solubio_db_seeded_v7';
         const isSeeded = localStorage.getItem(SEED_KEY);
 
         const users = await getAll('users');
@@ -363,7 +363,7 @@ const LaudoDB = (function () {
  * Gerenciador de Autenticação e Sessão
  */
 const AuthManager = (function () {
-    const CURRENT_USER_KEY = 'solubio_current_user_v6';
+    const CURRENT_USER_KEY = 'solubio_current_user_v7';
     let currentUser = null;
 
     function sanitizeName(name) {
