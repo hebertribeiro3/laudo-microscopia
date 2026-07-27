@@ -547,8 +547,6 @@ textarea {
 .header-banner-img {
     width: 100%;
     height: auto;
-    max-height: 65px;
-    object-fit: contain;
     display: block;
 }
 
@@ -1633,9 +1631,7 @@ textarea {
     .header-banner-img {
         width: 100% !important;
         height: auto !important;
-        max-height: 60px !important;
         display: block !important;
-        object-fit: contain !important;
     }
 
     .meta-section {
