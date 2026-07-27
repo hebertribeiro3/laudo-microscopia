@@ -239,9 +239,13 @@ const LaudoDB = (function () {
  * Firebase Firestore Sync Engine - Projeto: laudo-a366a
  */
 const firebaseConfig = {
-    projectId: "laudo-a366a",
-    authDomain: "laudo-a366a.firebaseapp.com",
-    storageBucket: "laudo-a366a.firebasestorage.app"
+  apiKey: "AIzaSyBFw_8RxOOJ-ZoV62CtYOi44PWFle6bTIo",
+  authDomain: "laudo-a366a.firebaseapp.com",
+  projectId: "laudo-a366a",
+  storageBucket: "laudo-a366a.firebasestorage.app",
+  messagingSenderId: "387088380527",
+  appId: "1:387088380527:web:8ec0cfcf10c95f6ad8539a",
+  measurementId: "G-BCY108CPE2"
 };
 
 let dbFirebase = null;
