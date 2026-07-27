@@ -431,6 +431,33 @@ const AuthManager = (function () {
             return { success: true, user: newUser };
         },
 
+        changePassword: async (userId, newPassword) => {
+            const users = await LaudoDB.getUsers();
+            const user = users.find(u => u.id === userId);
+            if (!user) {
+                return { success: false, message: 'Usuário não encontrado.' };
+            }
+            const cleanPass = (newPassword || '').trim();
+            if (cleanPass.length < 3) {
+                return { success: false, message: 'A nova senha deve ter no mínimo 3 caracteres.' };
+            }
+            if (cleanPass === '123') {
+                return { success: false, message: 'Escolha uma nova senha diferente da senha padrão (123).' };
+            }
+
+            user.password = cleanPass;
+            user.mustChangePassword = false;
+            await LaudoDB.saveUser(user);
+
+            if (currentUser && currentUser.id === userId) {
+                currentUser.password = cleanPass;
+                currentUser.mustChangePassword = false;
+                AuthManager.setCurrentUser(currentUser);
+            }
+
+            return { success: true, user: user };
+        },
+
         logout: () => {
             AuthManager.setCurrentUser(null);
         },

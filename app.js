@@ -976,8 +976,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 closeModal('modal-login');
                 renderUserSessionBar();
                 setPredefinedDefaults();
-                showToast(`Bem-vindo, ${res.user.name}!`, 'success');
-                checkFirstLoginClients();
+
+                if (pass === '123' || res.user.mustChangePassword) {
+                    showToast(`Bem-vindo, ${res.user.name}! Por segurança, por favor altere sua senha de acesso inicial.`, 'warning');
+                    setTimeout(() => {
+                        openModal('modal-change-password');
+                    }, 400);
+                } else {
+                    showToast(`Bem-vindo, ${res.user.name}!`, 'success');
+                    checkFirstLoginClients();
+                }
             } else {
                 failedLoginAttempts++;
                 if (failedLoginAttempts >= 5) {
@@ -1012,29 +1020,48 @@ document.addEventListener('DOMContentLoaded', () => {
                 closeModal('modal-login');
                 renderUserSessionBar();
                 setPredefinedDefaults();
-                showToast(`Cadastro realizado com sucesso! Bem-vindo, ${res.user.name}.`, 'success');
-                checkFirstLoginClients();
+
+                if (pass === '123') {
+                    showToast(`Cadastro realizado! Por favor, crie sua nova senha pessoal.`, 'warning');
+                    setTimeout(() => {
+                        openModal('modal-change-password');
+                    }, 400);
+                } else {
+                    showToast(`Cadastro realizado com sucesso! Bem-vindo, ${res.user.name}.`, 'success');
+                    checkFirstLoginClients();
+                }
             } else {
                 showToast(res.message, 'error');
             }
         });
     }
 
-    // Demo Login Buttons
-    document.querySelectorAll('.btn-demo-user').forEach(btn => {
-        btn.addEventListener('click', async () => {
-            const email = btn.getAttribute('data-email');
-            
-            const res = await AuthManager.login(email, '123');
+    // Change Password Form Handler
+    const formChangePassword = document.getElementById('form-change-password');
+    if (formChangePassword) {
+        formChangePassword.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const user = AuthManager.getCurrentUser();
+            if (!user) return;
+
+            const newPass = document.getElementById('change-pass-new').value.trim();
+            const confirmPass = document.getElementById('change-pass-confirm').value.trim();
+
+            if (newPass !== confirmPass) {
+                showToast('A confirmação de senha não confere. Digite a mesma senha nos dois campos.', 'error');
+                return;
+            }
+
+            const res = await AuthManager.changePassword(user.id, newPass);
             if (res.success) {
-                closeModal('modal-login');
-                renderUserSessionBar();
-                setPredefinedDefaults();
-                showToast(`Sessão iniciada como ${res.user.name}`, 'success');
+                closeModal('modal-change-password');
+                showToast('Sua nova senha foi salva com sucesso!', 'success');
                 checkFirstLoginClients();
+            } else {
+                showToast(res.message, 'error');
             }
         });
-    });
+    }
 
     // ----------------------------------------------------
     // User Session Bar & Client Management
@@ -1103,6 +1130,12 @@ document.addEventListener('DOMContentLoaded', () => {
             `;
         }
 
+        actionButtonsHTML += `
+            <button type="button" class="user-action-btn" id="btn-open-change-pass-bar" title="Alterar Minha Senha">
+                <i class="fa-solid fa-key"></i> Senha
+            </button>
+        `;
+
         bar.innerHTML = `
             <div class="user-top-row">
                 <div class="user-info">
@@ -1122,6 +1155,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 ${actionButtonsHTML}
             </div>
         `;
+
+        document.getElementById('btn-open-change-pass-bar')?.addEventListener('click', () => {
+            openModal('modal-change-password');
+        });
 
         document.getElementById('btn-open-clients-bar')?.addEventListener('click', () => {
             openModal('modal-clients');
