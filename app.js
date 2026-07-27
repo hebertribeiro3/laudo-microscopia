@@ -607,8 +607,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const currentUser = AuthManager.getCurrentUser();
         if (currentUser) {
-            if (!inputColeta.value) inputColeta.value = currentUser.name;
-            if (!inputAnalise.value) inputAnalise.value = currentUser.name;
+            const cleanName = currentUser.name.replace(/\s*\([^)]*\)/g, '').trim();
+            if (!inputColeta.value || inputColeta.value.includes('Admin Principal')) inputColeta.value = cleanName;
+            if (!inputAnalise.value || inputAnalise.value.includes('Admin Principal')) inputAnalise.value = cleanName;
         }
     }
 
@@ -646,7 +647,7 @@ document.addEventListener('DOMContentLoaded', () => {
             ph: document.getElementById('ph').value,
             data_multiplicacao: document.getElementById('data_multiplicacao').value,
             data_coleta: document.getElementById('data_coleta').value,
-            responsavel_coleta: inputColeta.value,
+            responsavel_coleta: (inputColeta.value || "").replace(/\s*\([^)]*\)/g, '').trim(),
             observacoes: document.getElementById('observacoes').value,
             
             data_recebimento: document.getElementById('data_recebimento').value,
@@ -657,7 +658,7 @@ document.addEventListener('DOMContentLoaded', () => {
             tempo_incubacao: document.getElementById('tempo_incubacao').value,
             choque_termico: getRadioValue('choque_termico'),
             coloracao_gram: document.getElementById('coloracao_gram').value,
-            responsavel_analise: inputAnalise.value,
+            responsavel_analise: (inputAnalise.value || "").replace(/\s*\([^)]*\)/g, '').trim(),
             
             resultado_qualitativo: getRadioValue('resultado_qualitativo'),
             outros_microrganismos: getRadioValue('outros_microrganismos'),
@@ -686,8 +687,8 @@ document.addEventListener('DOMContentLoaded', () => {
     function loadFormState(state) {
         if (!state) return;
         
-        document.getElementById('relatorio_num').value = state.relatorio_num || "";
-        document.getElementById('data_emissao').value = state.data_emissao || "";
+        if (state.relatorio_num) document.getElementById('relatorio_num').value = state.relatorio_num;
+        if (state.data_emissao) document.getElementById('data_emissao').value = state.data_emissao;
         
         if (state.cliente_fazenda) {
             selectCliente.value = state.cliente_fazenda;
@@ -699,8 +700,16 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
         
-        if (state.tipo_amostra) setRadioValue('tipo_amostra', state.tipo_amostra);
-        inputAmostraOutro.value = state.tipo_amostra_outro || "";
+        if (state.tipo_amostra) {
+            setRadioValue('tipo_amostra', state.tipo_amostra);
+            if (state.tipo_amostra === 'Outro') {
+                inputAmostraOutro.classList.remove('hidden');
+                inputAmostraOutro.value = state.tipo_amostra_outro || "";
+            } else {
+                inputAmostraOutro.classList.add('hidden');
+            }
+        }
+        
         if (state.meio_cultura) setRadioValue('meio_cultura', state.meio_cultura);
         if (state.tipo_compressor) setRadioValue('tipo_compressor', state.tipo_compressor);
         
@@ -723,7 +732,7 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('data_coleta').value = state.data_coleta || "";
         
         if (state.responsavel_coleta) {
-            inputColeta.value = state.responsavel_coleta;
+            inputColeta.value = state.responsavel_coleta.replace(/\s*\([^)]*\)/g, '').trim();
         }
         
         document.getElementById('observacoes').value = state.observacoes || "";
@@ -738,7 +747,7 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('coloracao_gram').value = state.coloracao_gram || "";
         
         if (state.responsavel_analise) {
-            inputAnalise.value = state.responsavel_analise;
+            inputAnalise.value = state.responsavel_analise.replace(/\s*\([^)]*\)/g, '').trim();
         }
         
         if (state.resultado_qualitativo) setRadioValue('resultado_qualitativo', state.resultado_qualitativo);

@@ -360,11 +360,19 @@ const AuthManager = (function () {
     const CURRENT_USER_KEY = 'solubio_current_user_v6';
     let currentUser = null;
 
+    function sanitizeName(name) {
+        if (!name) return '';
+        return name.replace(/\s*\([^)]*\)/g, '').trim();
+    }
+
     function init() {
         const stored = localStorage.getItem(CURRENT_USER_KEY);
         if (stored) {
             try {
                 currentUser = JSON.parse(stored);
+                if (currentUser && currentUser.name) {
+                    currentUser.name = sanitizeName(currentUser.name);
+                }
             } catch (e) {
                 currentUser = null;
             }
@@ -377,6 +385,9 @@ const AuthManager = (function () {
         getCurrentUser: () => currentUser,
 
         setCurrentUser: (user) => {
+            if (user && user.name) {
+                user.name = sanitizeName(user.name);
+            }
             currentUser = user;
             if (user) {
                 localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(user));
