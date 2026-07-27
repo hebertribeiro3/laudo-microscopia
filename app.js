@@ -463,7 +463,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Gerar Laudo Event (Auto-Salva no Repositório + Abre Impressão PDF)
     btnPrint.addEventListener('click', async () => {
-        const laudoRecord = await saveCurrentLaudo(true);
+        // Limpa quaisquer notificações toast visíveis na tela antes de imprimir
+        const toastContainer = document.getElementById('toast-container');
+        if (toastContainer) toastContainer.innerHTML = '';
+
+        const laudoRecord = await saveCurrentLaudo(false); // Sem notificação toast na tela durante a geração do PDF
         if (!laudoRecord) return; // Se não estiver logado, interrompe
 
         updatePreview();
@@ -478,7 +482,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 zoomLevel = originalZoom;
                 updateZoom();
             }, 300);
-        }, 200);
+        }, 150);
     });
 
     // Reset Form

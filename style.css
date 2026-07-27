@@ -1661,11 +1661,15 @@ textarea {
     .preview-toolbar,
     .user-session-bar,
     .toast-container,
+    .toast,
+    div.toast-container,
+    div.toast,
     .modal-overlay,
     .mobile-nav-bar {
         display: none !important;
         visibility: hidden !important;
         opacity: 0 !important;
+        z-index: -9999 !important;
     }
 
     .preview-area,
