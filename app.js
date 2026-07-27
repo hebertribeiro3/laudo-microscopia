@@ -1506,8 +1506,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 let roleClass = 'badge-role-consultor';
                 let roleLabel = 'Consultor';
                 if (l.authorRole === 'admin') {
-                    roleClass = 'badge-role-admin';
-                    roleLabel = 'Admin';
+                    if (currentUser && currentUser.role === 'admin') {
+                        roleClass = 'badge-role-admin';
+                        roleLabel = 'Admin';
+                    } else {
+                        roleClass = 'badge-role-consultor';
+                        roleLabel = 'Consultor';
+                    }
                 } else if (l.authorRole === 'coordenador') {
                     roleClass = 'badge-role-coordenador';
                     roleLabel = 'Coordenador';
