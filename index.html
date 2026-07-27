@@ -11,21 +11,7 @@
     <link rel="stylesheet" href="style.css?v=13">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        /* Correção Flexbox Sidebar contra Cache do Navegador */
-        .sidebar {
-            display: flex !important;
-            flex-direction: column !important;
-            height: 100vh !important;
-        }
-        .sidebar-footer {
-            padding: 10px 24px !important;
-            flex-shrink: 0 !important;
-        }
-        .sidebar-footer .btn-lg {
-            padding: 10px 20px !important;
-        }
-        
-        /* Garantia de Funcionamento do Clique de Upload */
+        /* Configuração de Upload */
         .file-input {
             z-index: 2 !important;
         }
@@ -33,81 +19,10 @@
             pointer-events: none !important;
         }
 
-        /* Estilização Compacta para Maximizar Área Visível */
-        .sidebar-header {
-            padding: 12px 16px !important;
-        }
-        .sidebar-header h1 {
-            font-size: 16px !important;
-            margin-bottom: 2px !important;
-        }
-        .sidebar-header p {
-            font-size: 11px !important;
-        }
-        
-        .actions-quick {
-            padding: 8px 16px !important;
-        }
-        .actions-quick button {
-            padding: 6px 12px !important;
-            font-size: 11px !important;
-        }
-
-        .laudo-form {
-            flex: 1 !important;
-            min-height: 0 !important;
-            overflow-y: auto !important;
-            gap: 12px !important;
-            padding: 12px 16px !important;
-        }
-        
-        .form-section {
-            padding: 12px 14px !important;
-            border-radius: 8px !important;
-        }
-        
-        .section-title {
-            font-size: 13px !important;
-            margin-bottom: 10px !important;
-            padding-bottom: 4px !important;
-        }
-        
-        .form-grid {
-            gap: 8px 8px !important;
-        }
-        
-        .form-group {
-            gap: 4px !important;
-        }
-        
-        label {
-            font-size: 11px !important;
-            margin-bottom: 2px !important;
-        }
-        
-        input[type="text"],
-        input[type="date"],
-        textarea,
-        select {
-            padding: 6px 10px !important;
-            font-size: 12px !important;
-            border-radius: 6px !important;
-            height: auto !important;
-        }
-        
-        .radio-group-tile {
-            gap: 3px !important;
-        }
-        
-        .tile-option span {
-            padding: 4px 6px !important;
-            font-size: 10px !important;
-            border-radius: 4px !important;
-        }
-
-        /* Força o layout lado a lado em telas maiores que 992px (evita quebra por cache de CSS) */
+        /* Layout Desktop (Telas > 992px) */
         @media (min-width: 993px) {
             .app-container {
+                display: flex !important;
                 flex-direction: row !important;
                 height: 100vh !important;
                 overflow: hidden !important;
@@ -115,10 +30,249 @@
             .sidebar {
                 width: 440px !important;
                 height: 100vh !important;
+                display: flex !important;
+                flex-direction: column !important;
                 border-right: 1px solid var(--border-color) !important;
             }
             .preview-area {
+                flex: 1 !important;
                 height: 100vh !important;
+                overflow: hidden !important;
+            }
+        }
+
+        /* Layout Mobile (Telas <= 992px) */
+        @media (max-width: 992px) {
+            html, body {
+                overflow-x: hidden !important;
+                width: 100vw !important;
+                height: 100vh !important;
+                margin: 0 !important;
+                padding: 0 !important;
+            }
+
+            .mobile-nav-bar {
+                display: flex !important;
+                position: fixed !important;
+                top: 0 !important;
+                left: 0 !important;
+                width: 100vw !important;
+                height: 48px !important;
+                background: #003e15 !important;
+                z-index: 99999 !important;
+                padding: 4px 8px !important;
+                box-sizing: border-box !important;
+                gap: 6px !important;
+            }
+
+            .mobile-nav-btn {
+                flex: 1 !important;
+                border: none !important;
+                background: rgba(255, 255, 255, 0.15) !important;
+                color: #ffffff !important;
+                font-weight: 700 !important;
+                font-size: 12px !important;
+                border-radius: 6px !important;
+                display: flex !important;
+                align-items: center !important;
+                justify-content: center !important;
+                gap: 6px !important;
+            }
+
+            .mobile-nav-btn.active {
+                background: #ffffff !important;
+                color: #003e15 !important;
+                box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2) !important;
+            }
+
+            .app-container {
+                position: absolute !important;
+                top: 48px !important;
+                left: 0 !important;
+                width: 100vw !important;
+                height: calc(100vh - 48px) !important;
+                overflow: hidden !important;
+                margin: 0 !important;
+            }
+
+            .sidebar {
+                width: 100vw !important;
+                height: 100% !important;
+                display: flex !important;
+                flex-direction: column !important;
+                background-color: #f8fafc !important;
+            }
+
+            .preview-area {
+                width: 100vw !important;
+                height: 100% !important;
+            }
+
+            /* Ocultar/Exibir Abas no Celular */
+            .app-container.show-mobile-form .preview-area {
+                display: none !important;
+            }
+
+            .app-container.show-mobile-preview .sidebar {
+                display: none !important;
+            }
+
+            /* Sessão do Usuário Compacta no Celular */
+            .user-session-bar {
+                padding: 10px 12px !important;
+            }
+
+            .user-session-bar .user-top-row {
+                margin-bottom: 6px !important;
+            }
+
+            .user-session-bar .user-name {
+                font-size: 12px !important;
+                max-width: 160px !important;
+                overflow: hidden !important;
+                text-overflow: ellipsis !important;
+                white-space: nowrap !important;
+            }
+
+            .user-session-bar .user-actions {
+                display: grid !important;
+                grid-template-columns: repeat(4, 1fr) !important;
+                gap: 4px !important;
+            }
+
+            .user-session-bar .user-action-btn {
+                padding: 6px 4px !important;
+                font-size: 10px !important;
+                justify-content: center !important;
+                text-align: center !important;
+                flex-direction: column !important;
+                gap: 2px !important;
+            }
+
+            .user-session-bar .user-action-btn i {
+                font-size: 12px !important;
+            }
+
+            /* Cabeçalho e Ações Rápida no Celular */
+            .sidebar-header {
+                padding: 10px 14px !important;
+            }
+
+            .sidebar-header h1 {
+                font-size: 15px !important;
+            }
+
+            .sidebar-header p {
+                font-size: 11px !important;
+            }
+
+            .actions-quick {
+                padding: 8px 12px !important;
+                gap: 8px !important;
+            }
+
+            .actions-quick button {
+                padding: 6px 10px !important;
+                font-size: 11px !important;
+            }
+
+            /* Formulário no Celular */
+            .laudo-form {
+                flex: 1 !important;
+                overflow-y: auto !important;
+                padding: 12px !important;
+                gap: 12px !important;
+                -webkit-overflow-scrolling: touch !important;
+            }
+
+            .form-section {
+                padding: 12px !important;
+                border-radius: 10px !important;
+            }
+
+            .section-title {
+                font-size: 13px !important;
+                margin-bottom: 10px !important;
+            }
+
+            .form-grid {
+                display: grid !important;
+                grid-template-columns: repeat(12, 1fr) !important;
+                gap: 10px 8px !important;
+            }
+
+            /* Organização das colunas no celular: tudo span 12 exceto pequenos pares */
+            .col-12, .col-6, .col-4, .col-3 {
+                grid-column: span 12 !important;
+            }
+
+            .col-mobile-6 {
+                grid-column: span 6 !important;
+            }
+
+            /* Inputs e Labels no Celular */
+            label {
+                font-size: 11px !important;
+                font-weight: 700 !important;
+            }
+
+            input[type="text"],
+            input[type="date"],
+            input[type="email"],
+            input[type="password"],
+            textarea,
+            select {
+                font-size: 13px !important;
+                padding: 10px 12px !important;
+                border-radius: 8px !important;
+            }
+
+            /* Botões Radio Tiles no Celular (EXCELENTE, PADRÃO, REGULAR, etc) */
+            .radio-group-tile {
+                display: grid !important;
+                grid-template-columns: repeat(auto-fit, minmax(90px, 1fr)) !important;
+                gap: 6px !important;
+            }
+
+            .tile-option {
+                width: 100% !important;
+            }
+
+            .tile-option span {
+                width: 100% !important;
+                box-sizing: border-box !important;
+                padding: 8px 4px !important;
+                font-size: 11px !important;
+                font-weight: 700 !important;
+                text-align: center !important;
+                border-radius: 6px !important;
+            }
+
+            /* Rodapé Fixo no Celular (Botão Gerar Laudo) */
+            .sidebar-footer {
+                padding: 10px 14px !important;
+                background: #ffffff !important;
+                border-top: 1px solid var(--border-color) !important;
+                box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.05) !important;
+                flex-shrink: 0 !important;
+            }
+
+            .sidebar-footer #btn-print {
+                padding: 12px 16px !important;
+                font-size: 14px !important;
+            }
+
+            /* Ajuste do Laudo A4 na Pré-Visualização Mobile */
+            .laudo-sheet-wrapper {
+                padding: 10px 4px !important;
+                overflow-x: auto !important;
+                display: flex !important;
+                justify-content: center !important;
+            }
+
+            .laudo-sheet {
+                transform-origin: top center !important;
+                box-shadow: 0 4px 16px rgba(0,0,0,0.1) !important;
             }
         }
     </style>
