@@ -187,11 +187,13 @@ const LaudoDB = (function () {
         },
         saveUser: async (user) => {
             const res = await put('users', user);
+            FirebaseSync.pushItem('users', user);
             CloudSync.syncAll();
             return res;
         },
         deleteUser: async (id) => {
             const res = await remove('users', id);
+            FirebaseSync.removeItem('users', id);
             CloudSync.syncAll();
             return res;
         },
@@ -202,11 +204,13 @@ const LaudoDB = (function () {
         },
         saveLaudo: async (laudo) => {
             const res = await put('laudos', laudo);
+            FirebaseSync.pushItem('laudos', laudo);
             CloudSync.syncAll();
             return res;
         },
         deleteLaudo: async (id) => {
             const res = await remove('laudos', id);
+            FirebaseSync.removeItem('laudos', id);
             CloudSync.syncAll();
             return res;
         },
@@ -217,15 +221,109 @@ const LaudoDB = (function () {
         },
         saveClient: async (client) => {
             const res = await put('clients', client);
+            FirebaseSync.pushItem('clients', client);
             CloudSync.syncAll();
             return res;
         },
         deleteClient: async (id) => {
             const res = await remove('clients', id);
+            FirebaseSync.removeItem('clients', id);
             CloudSync.syncAll();
             return res;
         },
         syncCloud: () => CloudSync.syncAll()
+    };
+})();
+
+/**
+ * Firebase Firestore Sync Engine - Projeto: laudo-a366a
+ */
+const firebaseConfig = {
+    projectId: "laudo-a366a",
+    authDomain: "laudo-a366a.firebaseapp.com",
+    storageBucket: "laudo-a366a.firebasestorage.app"
+};
+
+let dbFirebase = null;
+try {
+    if (typeof firebase !== 'undefined' && firebase.initializeApp) {
+        if (!firebase.apps.length) {
+            firebase.initializeApp(firebaseConfig);
+        }
+        dbFirebase = firebase.firestore();
+        console.log('[Firebase] Conectado com sucesso ao projeto:', firebaseConfig.projectId);
+    }
+} catch (e) {
+    console.warn('[Firebase] Aviso de inicialização:', e);
+}
+
+const FirebaseSync = (function () {
+    let isListening = false;
+
+    function initListeners() {
+        if (!dbFirebase || isListening) return;
+        isListening = true;
+
+        // Escutar usuários cadastrados em tempo real em qualquer celular/computador
+        dbFirebase.collection('users').onSnapshot(snapshot => {
+            snapshot.docChanges().forEach(async change => {
+                if (change.type === 'added' || change.type === 'modified') {
+                    const u = change.doc.data();
+                    if (u && u.id) {
+                        await LaudoDB.putLocal('users', u);
+                    }
+                }
+            });
+        }, err => console.warn('[Firebase] Listener usuários:', err));
+
+        // Escutar laudos em tempo real
+        dbFirebase.collection('laudos').onSnapshot(snapshot => {
+            snapshot.docChanges().forEach(async change => {
+                if (change.type === 'added' || change.type === 'modified') {
+                    const l = change.doc.data();
+                    if (l && l.id) {
+                        await LaudoDB.putLocal('laudos', l);
+                    }
+                }
+            });
+        }, err => console.warn('[Firebase] Listener laudos:', err));
+
+        // Escutar clientes
+        dbFirebase.collection('clients').onSnapshot(snapshot => {
+            snapshot.docChanges().forEach(async change => {
+                if (change.type === 'added' || change.type === 'modified') {
+                    const c = change.doc.data();
+                    if (c && c.id) {
+                        await LaudoDB.putLocal('clients', c);
+                    }
+                }
+            });
+        }, err => console.warn('[Firebase] Listener clientes:', err));
+    }
+
+    async function pushItem(collectionName, item) {
+        if (!dbFirebase || !item || !item.id) return;
+        try {
+            await dbFirebase.collection(collectionName).doc(item.id).set(item, { merge: true });
+        } catch (e) {
+            console.warn(`[Firebase] Erro ao enviar ${collectionName}:`, e);
+        }
+    }
+
+    async function removeItem(collectionName, id) {
+        if (!dbFirebase || !id) return;
+        try {
+            await dbFirebase.collection(collectionName).doc(id).delete();
+        } catch (e) {
+            console.warn(`[Firebase] Erro ao remover de ${collectionName}:`, e);
+        }
+    }
+
+    setTimeout(() => initListeners(), 1000);
+
+    return {
+        pushItem,
+        removeItem
     };
 })();
 
