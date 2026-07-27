@@ -334,7 +334,12 @@
                         </div>
 
                         <div class="form-group col-12">
-                            <label for="observacoes">Observações</label>
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                                <label for="observacoes" style="margin: 0;">Observações</label>
+                                <button type="button" id="btn-insert-obs-template" class="btn-sm-template" style="background: #ecfdf5; border: 1px solid #a7f3d0; color: #047857; font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 4px;" title="Clique para preencher com o texto padrão de análise qualitativa">
+                                    <i class="fa-solid fa-wand-magic-sparkles"></i> Inserir Texto Padrão
+                                </button>
+                            </div>
                             <textarea id="observacoes" name="observacoes" rows="3" placeholder="Observações sobre a análise..."></textarea>
                         </div>
                     </div>

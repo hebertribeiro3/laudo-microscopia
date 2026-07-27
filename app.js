@@ -592,18 +592,35 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!document.getElementById('data_analise').value) document.getElementById('data_analise').value = today;
     }
 
+    const DEFAULT_OBSERVACAO_TEXT = "Por meio da análise qualitativa por microscopia, foi possível verificar que o processo de multiplicação resultou alta concentração do microrganismo de interesse, e não apresentou outros microrganismos";
+
     function setPredefinedDefaults() {
         document.getElementById('tecnica_plaqueamento').value = "NA";
         document.getElementById('diluicoes').value = "NA";
         document.getElementById('temp_incubacao').value = "NA";
         document.getElementById('tempo_incubacao').value = "NA";
         
+        const obsField = document.getElementById('observacoes');
+        if (obsField && !obsField.value.trim()) {
+            obsField.value = DEFAULT_OBSERVACAO_TEXT;
+        }
+
         const currentUser = AuthManager.getCurrentUser();
         if (currentUser) {
             if (!inputColeta.value) inputColeta.value = currentUser.name;
             if (!inputAnalise.value) inputAnalise.value = currentUser.name;
         }
     }
+
+    // Button to insert standard Observações text
+    document.getElementById('btn-insert-obs-template')?.addEventListener('click', () => {
+        const obsField = document.getElementById('observacoes');
+        if (obsField) {
+            obsField.value = DEFAULT_OBSERVACAO_TEXT;
+            updatePreview();
+            showToast('Texto padrão inserido em Observações com sucesso!', 'info');
+        }
+    });
 
     // ----------------------------------------------------
     // State & Form Extraction Helpers
