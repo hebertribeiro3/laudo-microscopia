@@ -273,17 +273,13 @@ const LaudoDB = (function () {
     }
 
     async function seedInitialData() {
+        const SEED_KEY = 'solubio_db_seeded_v6';
+        const isSeeded = localStorage.getItem(SEED_KEY);
+
         const users = await getAll('users');
         if (users.length === 0) {
             for (const user of DEFAULT_USERS) {
                 await put('users', user);
-            }
-        }
-
-        const laudos = await getAll('laudos');
-        if (laudos.length === 0) {
-            for (const laudo of DEFAULT_LAUDOS) {
-                await put('laudos', laudo);
             }
         }
 
@@ -292,6 +288,16 @@ const LaudoDB = (function () {
             for (const client of DEFAULT_CLIENTS) {
                 await put('clients', client);
             }
+        }
+
+        if (!isSeeded) {
+            const laudos = await getAll('laudos');
+            if (laudos.length === 0) {
+                for (const laudo of DEFAULT_LAUDOS) {
+                    await put('laudos', laudo);
+                }
+            }
+            localStorage.setItem(SEED_KEY, 'true');
         }
     }
 
