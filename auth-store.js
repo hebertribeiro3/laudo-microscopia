@@ -100,7 +100,7 @@ const LaudoDB = (function () {
                 responsavel_analise: 'João Silva',
                 resultado_qualitativo: 'EXCELENTE',
                 outros_microrganismos: 'AUSENTE',
-                observacoes: 'Controle de qualidade microbiológico conforme os padrões estipulados.'
+                observacoes: 'Por meio da análise qualitativa por microscopia, foi possível verificar que o processo de multiplicação resultou alta concentração do microrganismo de interesse, e não apresentou outros microrganismos'
             }
         },
         {
@@ -144,7 +144,7 @@ const LaudoDB = (function () {
                 responsavel_analise: 'Maria Santos',
                 resultado_qualitativo: 'PADRÃO',
                 outros_microrganismos: 'AUSENTE',
-                observacoes: 'Amostra analisada com boa concentração celular.'
+                observacoes: 'Por meio da análise qualitativa por microscopia, foi possível verificar que o processo de multiplicação resultou alta concentração do microrganismo de interesse, e não apresentou outros microrganismos'
             }
         },
         {
@@ -188,7 +188,7 @@ const LaudoDB = (function () {
                 responsavel_analise: 'Bruna Carneiro',
                 resultado_qualitativo: 'EXCELENTE',
                 outros_microrganismos: 'AUSENTE',
-                observacoes: 'Auditoria de coordenação aprovada com distinção.'
+                observacoes: 'Por meio da análise qualitativa por microscopia, foi possível verificar que o processo de multiplicação resultou alta concentração do microrganismo de interesse, e não apresentou outros microrganismos'
             }
         },
         {
@@ -232,7 +232,7 @@ const LaudoDB = (function () {
                 responsavel_analise: 'Hebert Souza',
                 resultado_qualitativo: 'EXCELENTE',
                 outros_microrganismos: 'PRESENTE',
-                observacoes: 'Pigmentação violeta intensa confirmada pelo Administrador Principal.'
+                observacoes: 'Por meio da análise qualitativa por microscopia, foi possível verificar que o processo de multiplicação resultou alta concentração do microrganismo de interesse, e não apresentou outros microrganismos'
             }
         }
     ];

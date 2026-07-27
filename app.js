@@ -542,7 +542,7 @@ document.addEventListener('DOMContentLoaded', () => {
         inputColeta.value = currentUser ? currentUser.name : "João Silva";
         inputAnalise.value = currentUser ? currentUser.name : "João Silva";
 
-        document.getElementById('observacoes').value = "Amostra analisada conforme metodologia padrão. Apresentou crescimento característico e alta viabilidade microbiológica.";
+        document.getElementById('observacoes').value = DEFAULT_OBSERVACAO_TEXT;
 
         document.getElementById('data_recebimento').value = yesterdayStr;
         document.getElementById('data_analise').value = new Date().toISOString().split('T')[0];
