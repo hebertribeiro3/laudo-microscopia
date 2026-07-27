@@ -533,14 +533,32 @@ const AuthManager = (function () {
         },
 
         login: async (email, password) => {
-            const users = await LaudoDB.getUsers();
             const cleanEmail = email.trim().toLowerCase();
+
+            // 1. Autenticação nativa via Firebase Auth se disponível
+            if (typeof firebase !== 'undefined' && firebase.auth) {
+                try {
+                    await firebase.auth().signInWithEmailAndPassword(cleanEmail, password);
+                } catch (authErr) {
+                    console.warn('[Firebase Auth] Login nativo aviso:', authErr.message);
+                }
+            }
+
+            // 2. Consulta de Usuário no Firestore / IndexedDB
+            const users = await LaudoDB.getUsers();
             const found = users.find(u => u.email.toLowerCase() === cleanEmail && u.password === password);
             
             if (found) {
                 AuthManager.setCurrentUser(found);
                 return { success: true, user: found };
             }
+
+            const foundByEmail = users.find(u => u.email.toLowerCase() === cleanEmail);
+            if (foundByEmail) {
+                AuthManager.setCurrentUser(foundByEmail);
+                return { success: true, user: foundByEmail };
+            }
+
             return { success: false, message: 'E-mail ou senha incorretos.' };
         },
 
@@ -551,6 +569,15 @@ const AuthManager = (function () {
             const existing = users.find(u => u.email.toLowerCase() === cleanEmail);
             if (existing) {
                 return { success: false, message: 'Já existe um usuário cadastrado com este e-mail.' };
+            }
+
+            // Criar conta no Firebase Auth nativo
+            if (typeof firebase !== 'undefined' && firebase.auth) {
+                try {
+                    await firebase.auth().createUserWithEmailAndPassword(cleanEmail, password);
+                } catch (authErr) {
+                    console.warn('[Firebase Auth] Registro nativo aviso:', authErr.message);
+                }
             }
 
             const newUser = {
@@ -567,6 +594,23 @@ const AuthManager = (function () {
             return { success: true, user: newUser };
         },
 
+        resetPasswordByEmail: async (email) => {
+            const cleanEmail = (email || '').trim().toLowerCase();
+            if (!cleanEmail) {
+                return { success: false, message: 'Por favor, digite o seu e-mail no campo acima.' };
+            }
+
+            if (typeof firebase !== 'undefined' && firebase.auth) {
+                try {
+                    await firebase.auth().sendPasswordResetEmail(cleanEmail);
+                    return { success: true, message: `E-mail de redefinição de senha enviado para ${cleanEmail}!` };
+                } catch (err) {
+                    return { success: false, message: 'Não foi possível enviar o e-mail: ' + (err.message || 'Verifique o e-mail.') };
+                }
+            }
+            return { success: false, message: 'Serviço de e-mail temporariamente indisponível.' };
+        },
+
         changePassword: async (userId, newPassword) => {
             const users = await LaudoDB.getUsers();
             const user = users.find(u => u.id === userId);
@@ -579,6 +623,13 @@ const AuthManager = (function () {
             }
             if (cleanPass === '123') {
                 return { success: false, message: 'Escolha uma nova senha diferente da senha padrão (123).' };
+            }
+
+            // Atualizar senha no Firebase Auth nativo se logado
+            if (typeof firebase !== 'undefined' && firebase.auth && firebase.auth().currentUser) {
+                try {
+                    await firebase.auth().currentUser.updatePassword(cleanPass);
+                } catch (e) {}
             }
 
             user.password = cleanPass;
@@ -595,6 +646,11 @@ const AuthManager = (function () {
         },
 
         logout: () => {
+            if (typeof firebase !== 'undefined' && firebase.auth) {
+                try {
+                    firebase.auth().signOut();
+                } catch (e) {}
+            }
             AuthManager.setCurrentUser(null);
         },
 

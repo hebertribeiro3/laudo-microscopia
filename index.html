@@ -653,7 +653,12 @@
                     </div>
 
                     <div class="form-group mb-4">
-                        <label for="login-password" style="font-weight: 700; font-size: 11px; color: var(--text-secondary);">SENHA</label>
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                            <label for="login-password" style="font-weight: 700; font-size: 11px; color: var(--text-secondary); margin: 0;">SENHA</label>
+                            <button type="button" id="btn-forgot-password" style="background: none; border: none; color: #059669; font-size: 11px; font-weight: 700; cursor: pointer; text-decoration: underline; padding: 0;">
+                                Esqueci minha senha
+                            </button>
+                        </div>
                         <div class="input-with-icon">
                             <i class="fa-solid fa-lock input-icon-left"></i>
                             <input type="password" id="login-password" placeholder="••••••••" required autocomplete="current-password">
@@ -1043,12 +1048,13 @@
     <!-- Container de Toasts -->
     <div class="toast-container" id="toast-container"></div>
 
-    <!-- Firebase SDK (Nuvem em Tempo Real) -->
+    <!-- Firebase SDK (Nuvem em Tempo Real & Autenticação) -->
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
 
     <!-- Scripts da Aplicação -->
-    <script src="auth-store.js?v=2"></script>
-    <script src="app.js?v=9"></script>
+    <script src="auth-store.js?v=3"></script>
+    <script src="app.js?v=10"></script>
 </body>
 </html>

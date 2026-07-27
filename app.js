@@ -1021,6 +1021,24 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // Forgot Password Click Handler (Firebase Auth)
+    document.getElementById('btn-forgot-password')?.addEventListener('click', async () => {
+        const email = document.getElementById('login-email')?.value;
+        if (!email || !email.trim()) {
+            showToast('Por favor, digite seu e-mail no campo acima para receber o link de redefinição.', 'info');
+            document.getElementById('login-email')?.focus();
+            return;
+        }
+
+        showToast('Enviando e-mail de redefinição...', 'info');
+        const res = await AuthManager.resetPasswordByEmail(email);
+        if (res.success) {
+            showToast(res.message, 'success');
+        } else {
+            showToast(res.message, 'error');
+        }
+    });
+
     // Consultant Auto-Registration Handler
     if (formRegister) {
         formRegister.addEventListener('submit', async (e) => {
