@@ -464,16 +464,9 @@ document.addEventListener('DOMContentLoaded', () => {
     // Gerar Laudo Event (Auto-Salva no Repositório + Abre Impressão PDF)
     btnPrint.addEventListener('click', async () => {
         const laudoRecord = await saveCurrentLaudo(true);
-        if (!laudoRecord) return; // Se não estiver logado, modal abre e interrompe impressão
+        if (!laudoRecord) return; // Se não estiver logado, interrompe
 
         updatePreview();
-
-        // Se estiver no celular, ativa a aba de preview antes de imprimir
-        if (window.innerWidth <= 992 && appContainer) {
-            appContainer.classList.remove('show-mobile-form');
-            appContainer.classList.add('show-mobile-preview');
-            fitMobileLaudoSheet();
-        }
 
         const originalZoom = zoomLevel;
         zoomLevel = 100;
@@ -484,8 +477,8 @@ document.addEventListener('DOMContentLoaded', () => {
             setTimeout(() => {
                 zoomLevel = originalZoom;
                 updateZoom();
-            }, 500);
-        }, 300);
+            }, 300);
+        }, 200);
     });
 
     // Reset Form
@@ -1770,57 +1763,8 @@ document.addEventListener('DOMContentLoaded', () => {
         }, 3500);
     }
 
-    // Mobile Tab Switcher Logic
-    const btnMobileForm = document.getElementById('btn-show-mobile-form');
-    const btnMobilePreview = document.getElementById('btn-show-mobile-preview');
-    const appContainer = document.getElementById('app-container');
-
-    if (btnMobileForm && btnMobilePreview && appContainer) {
-        btnMobileForm.addEventListener('click', () => {
-            appContainer.classList.add('show-mobile-form');
-            appContainer.classList.remove('show-mobile-preview');
-            btnMobileForm.classList.add('active');
-            btnMobilePreview.classList.remove('active');
-        });
-
-        btnMobilePreview.addEventListener('click', () => {
-            appContainer.classList.remove('show-mobile-form');
-            appContainer.classList.add('show-mobile-preview');
-            btnMobilePreview.classList.add('active');
-            btnMobileForm.classList.remove('active');
-            updatePreview();
-            fitMobileLaudoSheet();
-        });
-    }
-
-    function fitMobileLaudoSheet() {
-        const sheet = document.querySelector('.laudo-sheet');
-        const wrapper = document.querySelector('.laudo-sheet-wrapper');
-        if (!sheet || !wrapper) return;
-
-        if (window.innerWidth <= 992) {
-            const availableWidth = wrapper.clientWidth - 16;
-            const sheetWidth = 794;
-            if (availableWidth > 0 && availableWidth < sheetWidth) {
-                const scale = Math.max(availableWidth / sheetWidth, 0.35);
-                sheet.style.transform = `scale(${scale})`;
-                sheet.style.transformOrigin = 'top center';
-                sheet.style.marginBottom = `-${(1 - scale) * 1050}px`;
-            } else {
-                sheet.style.transform = 'none';
-                sheet.style.marginBottom = '0px';
-            }
-        } else {
-            sheet.style.transform = 'none';
-            sheet.style.marginBottom = '0px';
-        }
-    }
-
-    window.addEventListener('resize', fitMobileLaudoSheet);
-
     // Initialize Application Auth & Session State
     loadFromLocalStorage();
     renderUserSessionBar();
     updateZoom();
-    fitMobileLaudoSheet();
 });
