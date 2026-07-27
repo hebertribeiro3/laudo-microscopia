@@ -276,6 +276,9 @@ const FirebaseSync = (function () {
                     if (u && u.id) {
                         await LaudoDB.putLocal('users', u);
                     }
+                } else if (change.type === 'removed') {
+                    const id = change.doc.id;
+                    await LaudoDB.removeLocal('users', id);
                 }
             });
         }, err => console.warn('[Firebase] Listener usuários:', err));
@@ -288,6 +291,9 @@ const FirebaseSync = (function () {
                     if (l && l.id) {
                         await LaudoDB.putLocal('laudos', l);
                     }
+                } else if (change.type === 'removed') {
+                    const id = change.doc.id;
+                    await LaudoDB.removeLocal('laudos', id);
                 }
             });
         }, err => console.warn('[Firebase] Listener laudos:', err));
@@ -300,6 +306,9 @@ const FirebaseSync = (function () {
                     if (c && c.id) {
                         await LaudoDB.putLocal('clients', c);
                     }
+                } else if (change.type === 'removed') {
+                    const id = change.doc.id;
+                    await LaudoDB.removeLocal('clients', id);
                 }
             });
         }, err => console.warn('[Firebase] Listener clientes:', err));
