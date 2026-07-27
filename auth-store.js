@@ -4,7 +4,7 @@
  */
 
 const LaudoDB = (function () {
-    const DB_NAME = 'SolubioLaudosDB_v7';
+    const DB_NAME = 'SolubioLaudosDB_v8';
     const DB_VERSION = 1;
     let dbInstance = null;
 
@@ -57,185 +57,8 @@ const LaudoDB = (function () {
         { id: 'cli_9', userId: 'usr_admin', name: 'Willian Matté - Grupo MEC' }
     ];
 
-    // Laudos Iniciais de Exemplo para Demonstração de Hierarquia
-    const DEFAULT_LAUDOS = [
-        {
-            id: 'laudo_demo_1',
-            relatorio_num: '041.2025',
-            cliente_fazenda: 'Gilson Adriano Bomfim - Fazenda Sagrada Fámilia',
-            nome_produto: 'Bio Balance',
-            microrganismo: 'Bacillus amyloliquefaciens',
-            data_emissao: '2025-02-10',
-            data_analise: '2025-02-09',
-            authorId: 'usr_cons_joao',
-            authorName: 'João Silva',
-            authorRole: 'consultor',
-            coordinatorId: 'usr_coord_bruna',
-            coordinatorName: 'Bruna Carneiro',
-            createdAt: '2025-02-10T10:00:00.000Z',
-            formData: {
-                relatorio_num: '041.2025',
-                data_emissao: '2025-02-10',
-                cliente_fazenda: 'Gilson Adriano Bomfim - Fazenda Sagrada Fámilia',
-                tipo_amostra: 'Multiplicado',
-                nome_produto: 'Bio Balance',
-                microrganismo: 'Bacillus amyloliquefaciens',
-                meio_cultura: 'BAC',
-                tipo_compressor: 'Odontológico',
-                lote_produto: 'LT-2025-A',
-                lote_meio: 'LM-992',
-                temperatura: '28',
-                ph: '6.8',
-                data_multiplicacao: '2025-02-08',
-                data_coleta: '2025-02-08',
-                responsavel_coleta: 'João Silva',
-                data_recebimento: '2025-02-09',
-                data_analise: '2025-02-09',
-                tecnica_plaqueamento: 'NA',
-                diluicoes: 'NA',
-                temp_incubacao: 'NA',
-                tempo_incubacao: 'NA',
-                choque_termico: 'NÃO',
-                coloracao_gram: 'Bastonetes gram-positivos com endósporos',
-                responsavel_analise: 'João Silva',
-                resultado_qualitativo: 'EXCELENTE',
-                outros_microrganismos: 'AUSENTE',
-                observacoes: 'Por meio da análise qualitativa por microscopia, foi possível verificar que o processo de multiplicação resultou alta concentração do microrganismo de interesse, e não apresentou outros microrganismos'
-            }
-        },
-        {
-            id: 'laudo_demo_2',
-            relatorio_num: '042.2025',
-            cliente_fazenda: 'Marcelo Isoton - Fazenda Reaconquista II',
-            nome_produto: 'Solubio Raiz Performance',
-            microrganismo: 'Bacillus subtilis',
-            data_emissao: '2025-02-12',
-            data_analise: '2025-02-11',
-            authorId: 'usr_cons_maria',
-            authorName: 'Maria Santos',
-            authorRole: 'consultor',
-            coordinatorId: 'usr_coord_bruna',
-            coordinatorName: 'Bruna Carneiro',
-            createdAt: '2025-02-12T14:30:00.000Z',
-            formData: {
-                relatorio_num: '042.2025',
-                data_emissao: '2025-02-12',
-                cliente_fazenda: 'Marcelo Isoton - Fazenda Reaconquista II',
-                tipo_amostra: 'Multiplicado',
-                nome_produto: 'Solubio Raiz Performance',
-                microrganismo: 'Bacillus subtilis',
-                meio_cultura: 'BAC',
-                tipo_compressor: 'Parafuso',
-                lote_produto: 'LT-2025-B',
-                lote_meio: 'LM-993',
-                temperatura: '27',
-                ph: '7.0',
-                data_multiplicacao: '2025-02-10',
-                data_coleta: '2025-02-10',
-                responsavel_coleta: 'Maria Santos',
-                data_recebimento: '2025-02-11',
-                data_analise: '2025-02-11',
-                tecnica_plaqueamento: 'NA',
-                diluicoes: 'NA',
-                temp_incubacao: 'NA',
-                tempo_incubacao: 'NA',
-                choque_termico: 'NÃO',
-                coloracao_gram: 'Bastonetes isolados e em pares',
-                responsavel_analise: 'Maria Santos',
-                resultado_qualitativo: 'PADRÃO',
-                outros_microrganismos: 'AUSENTE',
-                observacoes: 'Por meio da análise qualitativa por microscopia, foi possível verificar que o processo de multiplicação resultou alta concentração do microrganismo de interesse, e não apresentou outros microrganismos'
-            }
-        },
-        {
-            id: 'laudo_demo_3',
-            relatorio_num: '043.2025',
-            cliente_fazenda: 'SLC- Fazenda Pamplona I',
-            nome_produto: 'Bio Release',
-            microrganismo: 'Pseudomonas fluorescens',
-            data_emissao: '2025-02-14',
-            data_analise: '2025-02-13',
-            authorId: 'usr_coord_bruna',
-            authorName: 'Bruna Carneiro',
-            authorRole: 'coordenador',
-            coordinatorId: null,
-            coordinatorName: null,
-            createdAt: '2025-02-14T09:15:00.000Z',
-            formData: {
-                relatorio_num: '043.2025',
-                data_emissao: '2025-02-14',
-                cliente_fazenda: 'SLC- Fazenda Pamplona I',
-                tipo_amostra: 'Multiplicado',
-                nome_produto: 'Bio Release',
-                microrganismo: 'Pseudomonas fluorescens',
-                meio_cultura: 'BAC',
-                tipo_compressor: 'Radial',
-                lote_produto: 'LT-2025-C',
-                lote_meio: 'LM-994',
-                temperatura: '26',
-                ph: '6.9',
-                data_multiplicacao: '2025-02-12',
-                data_coleta: '2025-02-12',
-                responsavel_coleta: 'Bruna Carneiro',
-                data_recebimento: '2025-02-13',
-                data_analise: '2025-02-13',
-                tecnica_plaqueamento: 'NA',
-                diluicoes: 'NA',
-                temp_incubacao: 'NA',
-                tempo_incubacao: 'NA',
-                choque_termico: 'NÃO',
-                coloracao_gram: 'Bastonetes gram-negativos móveis',
-                responsavel_analise: 'Bruna Carneiro',
-                resultado_qualitativo: 'EXCELENTE',
-                outros_microrganismos: 'AUSENTE',
-                observacoes: 'Por meio da análise qualitativa por microscopia, foi possível verificar que o processo de multiplicação resultou alta concentração do microrganismo de interesse, e não apresentou outros microrganismos'
-            }
-        },
-        {
-            id: 'laudo_demo_4',
-            relatorio_num: '044.2025',
-            cliente_fazenda: 'Lauri Pooz - Fazenda Sete Irmão',
-            nome_produto: 'Tec Bug',
-            microrganismo: 'Chromobacterium subtsugae',
-            data_emissao: '2025-02-15',
-            data_analise: '2025-02-15',
-            authorId: 'usr_admin',
-            authorName: 'Hebert Souza',
-            authorRole: 'admin',
-            coordinatorId: null,
-            coordinatorName: null,
-            createdAt: '2025-02-15T16:20:00.000Z',
-            formData: {
-                relatorio_num: '044.2025',
-                data_emissao: '2025-02-15',
-                cliente_fazenda: 'Lauri Pooz - Fazenda Sete Irmão',
-                tipo_amostra: 'Multiplicado',
-                nome_produto: 'Tec Bug',
-                microrganismo: 'Chromobacterium subtsugae',
-                meio_cultura: 'BUG',
-                tipo_compressor: 'Odontológico',
-                lote_produto: 'LT-2025-D',
-                lote_meio: 'LM-995',
-                temperatura: '28',
-                ph: '6.7',
-                data_multiplicacao: '2025-02-14',
-                data_coleta: '2025-02-14',
-                responsavel_coleta: 'Hebert Souza',
-                data_recebimento: '2025-02-15',
-                data_analise: '2025-02-15',
-                tecnica_plaqueamento: 'NA',
-                diluicoes: 'NA',
-                temp_incubacao: 'NA',
-                tempo_incubacao: 'NA',
-                choque_termico: 'NÃO',
-                coloracao_gram: 'Cocos-bastonetes violáceos característicos',
-                responsavel_analise: 'Hebert Souza',
-                resultado_qualitativo: 'EXCELENTE',
-                outros_microrganismos: 'PRESENTE',
-                observacoes: 'Por meio da análise qualitativa por microscopia, foi possível verificar que o processo de multiplicação resultou alta concentração do microrganismo de interesse, e não apresentou outros microrganismos'
-            }
-        }
-    ];
+    // Sem laudos de exemplo inseridos automaticamente (Usuário começa limpo)
+    const DEFAULT_LAUDOS = [];
 
     function openDB() {
         return new Promise((resolve, reject) => {
@@ -273,7 +96,7 @@ const LaudoDB = (function () {
     }
 
     async function seedInitialData() {
-        const SEED_KEY = 'solubio_db_seeded_v7';
+        const SEED_KEY = 'solubio_db_seeded_v8';
         const isSeeded = localStorage.getItem(SEED_KEY);
 
         const users = await getAll('users');
@@ -363,7 +186,7 @@ const LaudoDB = (function () {
  * Gerenciador de Autenticação e Sessão
  */
 const AuthManager = (function () {
-    const CURRENT_USER_KEY = 'solubio_current_user_v7';
+    const CURRENT_USER_KEY = 'solubio_current_user_v8';
     let currentUser = null;
 
     function sanitizeName(name) {
