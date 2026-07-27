@@ -527,17 +527,19 @@ textarea {
     box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
     display: flex;
     flex-direction: column;
-    padding: 18px 25px;
+    justify-content: space-between;
+    padding: 16px 22px;
     box-sizing: border-box;
     transform-origin: top center;
     position: relative;
     font-family: Calibri, Arial, sans-serif; /* Excel/Word exact match */
+    overflow: hidden;
 }
 
 /* Report Element Styling */
 .laudo-header-banner {
     width: 100%;
-    margin-bottom: 8px;
+    margin-bottom: 6px;
     overflow: hidden;
     flex-shrink: 0; /* Impede encolhimento no flexbox */
 }
@@ -545,6 +547,8 @@ textarea {
 .header-banner-img {
     width: 100%;
     height: auto;
+    max-height: 65px;
+    object-fit: contain;
     display: block;
 }
 
@@ -704,7 +708,8 @@ textarea {
 
 .photo-wrapper {
     flex: 1;
-    height: 185px; /* Altura menor para caber tudo em 1 folha A4 */
+    height: 135px; /* Altura ajustada para caber tudo em 1 folha A4 */
+    max-height: 135px;
     background-color: #fafbfc;
     display: flex;
     align-items: center;
@@ -716,6 +721,8 @@ textarea {
 .photo-wrapper img {
     width: 100%;
     height: 100%;
+    max-width: 100%;
+    max-height: 100%;
     object-fit: cover; /* Crop to fit cleanly */
 }
 
@@ -793,144 +800,7 @@ textarea {
     }
 }
 
-/* PRINT RULES */
-@media print {
-    @page {
-        size: A4 portrait;
-        margin: 0mm; /* Zera margens do navegador para controle total pelo CSS */
-    }
 
-    /* Hide UI controls */
-    .no-print,
-    .sidebar,
-    .preview-toolbar,
-    #zoom-out,
-    #zoom-in,
-    #zoom-level {
-        display: none !important;
-    }
-    
-    /* Reset body and container */
-    body, html {
-        background-color: #ffffff !important;
-        color: #000000 !important;
-        width: 210mm !important;
-        height: 297mm !important;
-        margin: 0 !important;
-        padding: 0 !important;
-        overflow: hidden !important; /* Prevent extra blank page */
-        display: block !important;
-    }
-    
-    .app-container {
-        display: block !important;
-        position: absolute !important;
-        left: 0 !important;
-        top: 0 !important;
-        width: 210mm !important;
-        height: 297mm !important;
-        margin: 0 !important;
-        padding: 0 !important;
-        overflow: hidden !important;
-    }
-    
-    .preview-area {
-        display: block !important;
-        position: absolute !important;
-        left: 0 !important;
-        top: 0 !important;
-        width: 210mm !important;
-        height: 297mm !important;
-        padding: 0 !important;
-        margin: 0 !important;
-        overflow: hidden !important;
-    }
-    
-    .laudo-sheet-wrapper {
-        display: block !important;
-        position: absolute !important;
-        left: 0 !important;
-        top: 0 !important;
-        width: 210mm !important;
-        height: 297mm !important;
-        padding: 0 !important;
-        margin: 0 !important;
-        background-color: transparent !important;
-        overflow: hidden !important;
-    }
-    
-    /* Force specific A4 sheet size to remove shadows & margins */
-    .laudo-sheet {
-        position: absolute !important;
-        left: 0 !important;
-        top: 0 !important;
-        box-shadow: none !important;
-        margin: 0 !important;
-        padding: 8mm 12mm !important; /* Margem interna ideal para impressão */
-        width: 210mm !important;
-        height: 297mm !important;
-        max-height: 297mm !important;
-        max-width: 210mm !important;
-        box-sizing: border-box !important;
-        overflow: hidden !important; /* Force fit */
-        page-break-after: avoid !important;
-        page-break-before: avoid !important;
-        page-break-inside: avoid !important;
-        transform: scale(1) !important;
-    }
-    
-    /* Fix backgrounds in print */
-    * {
-        -webkit-print-color-adjust: exact !important;
-        print-color-adjust: exact !important;
-    }
-    
-    .laudo-header-banner {
-        background-color: transparent !important;
-        background-image: none !important;
-        width: 100% !important;
-        height: auto !important;
-        margin-bottom: 5px !important; /* Mais compacto */
-        overflow: hidden !important;
-        display: block !important;
-        flex-shrink: 0 !important;
-    }
-
-    .header-banner-img {
-        width: 100% !important;
-        height: auto !important;
-        max-height: none !important;
-        display: block !important;
-    }
-    
-    /* Compactar tabelas na impressão para economizar espaço para o rodapé */
-    .report-section {
-        margin-bottom: 5px !important;
-    }
-    
-    .report-table td {
-        padding: 3px 5px !important;
-        font-size: 11px !important;
-        line-height: 1.15 !important;
-    }
-    
-    .photo-wrapper {
-        height: 130px !important; /* Reduz de 138px para 130px na impressão para garantir encaixe sem cortes */
-    }
-    
-    .laudo-footer {
-        padding-top: 4px !important;
-        flex-shrink: 0 !important;
-    }
-    
-    .label-td {
-        background-color: #f2f2f2 !important;
-    }
-    
-    .results-table th {
-        background-color: #f2f2f2 !important;
-    }
-}
 
 /* ==========================================================================
    USER SESSION BAR, MODALS, HIERARCHY BADGES & LAUDO MANAGEMENT STYLES
@@ -1644,13 +1514,14 @@ textarea {
     }
 }
 
-/* PRINT RULES - GARANTE QUE APENAS A FOLHA DO LAUDO (A4) É IMPRESSA */
+/* PRINT RULES - GARANTE EXATAMENTE 1 FOLHA A4 COM RODAPÉ FIXO E IMAGENS AJUSTADAS */
 @media print {
     @page {
         size: A4 portrait;
-        margin: 0mm;
+        margin: 0mm !important;
     }
 
+    /* Ocultar elementos fora da folha */
     body * {
         visibility: hidden !important;
     }
@@ -1665,7 +1536,8 @@ textarea {
     div.toast-container,
     div.toast,
     .modal-overlay,
-    .mobile-nav-bar {
+    .mobile-nav-bar,
+    #zoom-out, #zoom-in, #zoom-level {
         display: none !important;
         visibility: hidden !important;
         opacity: 0 !important;
@@ -1679,41 +1551,24 @@ textarea {
         visibility: visible !important;
     }
 
-    body, html {
+    /* Reset global da página para caber rigorosamente em 1 folha A4 */
+    html, body {
         background-color: #ffffff !important;
         color: #000000 !important;
         width: 210mm !important;
         height: 297mm !important;
+        max-width: 210mm !important;
+        max-height: 297mm !important;
         margin: 0 !important;
         padding: 0 !important;
         overflow: hidden !important;
         display: block !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
     }
 
-    .app-container {
-        display: block !important;
-        position: absolute !important;
-        left: 0 !important;
-        top: 0 !important;
-        width: 210mm !important;
-        height: 297mm !important;
-        margin: 0 !important;
-        padding: 0 !important;
-        overflow: hidden !important;
-    }
-
-    .preview-area {
-        display: block !important;
-        position: absolute !important;
-        left: 0 !important;
-        top: 0 !important;
-        width: 210mm !important;
-        height: 297mm !important;
-        padding: 0 !important;
-        margin: 0 !important;
-        overflow: hidden !important;
-    }
-
+    .app-container,
+    .preview-area,
     .laudo-sheet-wrapper {
         display: block !important;
         position: absolute !important;
@@ -1721,31 +1576,193 @@ textarea {
         top: 0 !important;
         width: 210mm !important;
         height: 297mm !important;
-        padding: 0 !important;
+        max-width: 210mm !important;
+        max-height: 297mm !important;
         margin: 0 !important;
+        padding: 0 !important;
         background-color: transparent !important;
         overflow: hidden !important;
+        border: none !important;
+        box-shadow: none !important;
     }
 
+    /* Estrutura principal da Folha do Laudo em A4 */
     .laudo-sheet {
         display: flex !important;
+        flex-direction: column !important;
+        justify-content: space-between !important;
         position: absolute !important;
         left: 0 !important;
         top: 0 !important;
-        box-shadow: none !important;
-        margin: 0 !important;
-        padding: 8mm 12mm !important;
         width: 210mm !important;
         height: 297mm !important;
-        max-height: 297mm !important;
         max-width: 210mm !important;
+        max-height: 297mm !important;
+        padding: 6mm 10mm 5mm 10mm !important; /* Margens otimizadas para 1 folha */
+        margin: 0 !important;
+        box-shadow: none !important;
+        border: none !important;
         box-sizing: border-box !important;
+        overflow: hidden !important; /* Impede a criação de 2ª folha */
+        page-break-after: avoid !important;
+        page-break-before: avoid !important;
+        page-break-inside: avoid !important;
+        break-after: avoid !important;
+        break-before: avoid !important;
+        break-inside: avoid !important;
         transform: scale(1) !important;
     }
 
-    * {
-        -webkit-print-color-adjust: exact !important;
-        print-color-adjust: exact !important;
+    .laudo-sheet * {
+        page-break-inside: avoid !important;
+        break-inside: avoid !important;
+    }
+
+    /* Banner Superior */
+    .laudo-header-banner {
+        background-color: transparent !important;
+        background-image: none !important;
+        width: 100% !important;
+        height: auto !important;
+        margin-bottom: 4px !important;
+        overflow: hidden !important;
+        display: block !important;
+        flex-shrink: 0 !important;
+    }
+
+    .header-banner-img {
+        width: 100% !important;
+        height: auto !important;
+        max-height: 60px !important;
+        display: block !important;
+        object-fit: contain !important;
+    }
+
+    .meta-section {
+        margin-bottom: 5px !important;
+        padding: 3px 6px !important;
+        flex-shrink: 0 !important;
+    }
+
+    /* Seções e Tabelas Compactas para Garantir Encaixe */
+    .report-section {
+        margin-bottom: 4px !important;
+        flex-shrink: 0 !important;
+    }
+
+    .report-section.flex-grow {
+        flex: 1 1 auto !important;
+        min-height: 0 !important;
+        margin-bottom: 4px !important;
+    }
+
+    .report-section-header {
+        padding: 3px 6px !important;
+        font-size: 10px !important;
+        margin-bottom: 2px !important;
+    }
+
+    .report-table td {
+        padding: 2.5px 5px !important;
+        font-size: 10px !important;
+        line-height: 1.15 !important;
+    }
+
+    .label-td {
+        background-color: #f2f2f2 !important;
+    }
+
+    .checkbox-container {
+        gap: 2px 8px !important;
+    }
+
+    .checkbox-item {
+        font-size: 9.5px !important;
+    }
+
+    .results-table th {
+        background-color: #f2f2f2 !important;
+        padding: 3px 5px !important;
+        font-size: 10px !important;
+    }
+
+    .results-table td {
+        padding: 4px !important;
+        font-size: 12px !important;
+    }
+
+    /* Fotos da Análise: Fixação de Altura para Não Extrapolar */
+    .photos-container {
+        display: flex !important;
+        gap: 10px !important;
+        margin-top: 2px !important;
+        flex: 1 1 auto !important;
+        min-height: 0 !important;
+    }
+
+    .photo-box {
+        flex: 1 1 50% !important;
+        border: 1px solid #000000 !important;
+        display: flex !important;
+        flex-direction: column !important;
+        min-height: 0 !important;
+    }
+
+    .photo-title {
+        padding: 2px 4px !important;
+        font-size: 9px !important;
+    }
+
+    .photo-wrapper {
+        height: 120px !important; /* Altura ideal fixada para não estrapolar página */
+        max-height: 120px !important;
+        min-height: 90px !important;
+        flex: 1 1 auto !important;
+        background-color: #fafbfc !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        position: relative !important;
+        overflow: hidden !important;
+    }
+
+    .photo-wrapper img {
+        width: 100% !important;
+        height: 100% !important;
+        max-width: 100% !important;
+        max-height: 100% !important;
+        object-fit: cover !important;
+        display: block !important;
+    }
+
+    .photo-placeholder {
+        padding: 4px !important;
+    }
+
+    .photo-placeholder i {
+        font-size: 20px !important;
+        margin-bottom: 2px !important;
+    }
+
+    .photo-placeholder span {
+        font-size: 9px !important;
+    }
+
+    /* Rodapé Fixo no Fim da Página */
+    .laudo-footer {
+        margin-top: auto !important;
+        padding-top: 3px !important;
+        padding-bottom: 0 !important;
+        flex-shrink: 0 !important;
+        width: 100% !important;
+    }
+
+    .footer-divider {
+        margin-bottom: 3px !important;
+    }
+
+    .footer-text {
+        font-size: 8.5px !important;
     }
 }
 
