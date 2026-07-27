@@ -174,15 +174,186 @@ const LaudoDB = (function () {
     }
 
     return {
-        getUsers: () => getAll('users'),
-        saveUser: (user) => put('users', user),
-        deleteUser: (id) => remove('users', id),
-        getLaudos: () => getAll('laudos'),
-        saveLaudo: (laudo) => put('laudos', laudo),
-        deleteLaudo: (id) => remove('laudos', id),
-        getClients: () => getAll('clients'),
-        saveClient: (client) => put('clients', client),
-        deleteClient: (id) => remove('clients', id)
+        getUsersLocal: () => getAll('users'),
+        getLaudosLocal: () => getAll('laudos'),
+        getClientsLocal: () => getAll('clients'),
+        putLocal: (storeName, item) => put(storeName, item),
+        removeLocal: (storeName, id) => remove(storeName, id),
+
+        getUsers: async () => {
+            const local = await getAll('users');
+            CloudSync.syncAll();
+            return local;
+        },
+        saveUser: async (user) => {
+            const res = await put('users', user);
+            CloudSync.syncAll();
+            return res;
+        },
+        deleteUser: async (id) => {
+            const res = await remove('users', id);
+            CloudSync.syncAll();
+            return res;
+        },
+        getLaudos: async () => {
+            const local = await getAll('laudos');
+            CloudSync.syncAll();
+            return local;
+        },
+        saveLaudo: async (laudo) => {
+            const res = await put('laudos', laudo);
+            CloudSync.syncAll();
+            return res;
+        },
+        deleteLaudo: async (id) => {
+            const res = await remove('laudos', id);
+            CloudSync.syncAll();
+            return res;
+        },
+        getClients: async () => {
+            const local = await getAll('clients');
+            CloudSync.syncAll();
+            return local;
+        },
+        saveClient: async (client) => {
+            const res = await put('clients', client);
+            CloudSync.syncAll();
+            return res;
+        },
+        deleteClient: async (id) => {
+            const res = await remove('clients', id);
+            CloudSync.syncAll();
+            return res;
+        },
+        syncCloud: () => CloudSync.syncAll()
+    };
+})();
+
+/**
+ * CloudSync - Sincronização em Nuvem em Tempo Real
+ * Sincroniza usuários, laudos e clientes entre qualquer computador ou celular.
+ */
+const CloudSync = (function () {
+    const CLOUD_URL = 'https://api.restful-api.dev/objects/ff8081819f7e10ae019fa560322f35d3';
+    let isSyncing = false;
+
+    async function fetchCloudData() {
+        try {
+            const res = await fetch(CLOUD_URL);
+            if (!res.ok) return null;
+            const body = await res.json();
+            return body.data || { users: [], laudos: [], clients: [] };
+        } catch (e) {
+            console.warn('[CloudSync] Erro de busca na nuvem:', e);
+            return null;
+        }
+    }
+
+    async function updateCloudData(data) {
+        try {
+            await fetch(CLOUD_URL, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    name: 'solubio_laudos_sync_store',
+                    data: data
+                })
+            });
+        } catch (e) {
+            console.warn('[CloudSync] Erro ao salvar na nuvem:', e);
+        }
+    }
+
+    async function syncAll() {
+        if (isSyncing) return;
+        isSyncing = true;
+
+        try {
+            const cloudData = await fetchCloudData();
+            const localUsers = await LaudoDB.getUsersLocal();
+            const localLaudos = await LaudoDB.getLaudosLocal();
+            const localClients = await LaudoDB.getClientsLocal();
+
+            let hasNewLocalData = false;
+
+            // 1. Sincronizar Usuários
+            const cloudUsers = (cloudData && Array.isArray(cloudData.users)) ? cloudData.users : [];
+            const mergedUsers = [...localUsers];
+
+            for (const cUser of cloudUsers) {
+                const index = mergedUsers.findIndex(u => u.id === cUser.id || (u.email && cUser.email && u.email.toLowerCase() === cUser.email.toLowerCase()));
+                if (index === -1) {
+                    mergedUsers.push(cUser);
+                    await LaudoDB.putLocal('users', cUser);
+                } else {
+                    mergedUsers[index] = { ...mergedUsers[index], ...cUser };
+                    await LaudoDB.putLocal('users', mergedUsers[index]);
+                }
+            }
+
+            for (const lUser of localUsers) {
+                if (!cloudUsers.some(u => u.id === lUser.id || (u.email && lUser.email && u.email.toLowerCase() === lUser.email.toLowerCase()))) {
+                    hasNewLocalData = true;
+                }
+            }
+
+            // 2. Sincronizar Laudos
+            const cloudLaudos = (cloudData && Array.isArray(cloudData.laudos)) ? cloudData.laudos : [];
+            const mergedLaudos = [...localLaudos];
+
+            for (const cLaudo of cloudLaudos) {
+                const index = mergedLaudos.findIndex(l => l.id === cLaudo.id);
+                if (index === -1) {
+                    mergedLaudos.push(cLaudo);
+                    await LaudoDB.putLocal('laudos', cLaudo);
+                }
+            }
+
+            for (const lLaudo of localLaudos) {
+                if (!cloudLaudos.some(l => l.id === lLaudo.id)) {
+                    hasNewLocalData = true;
+                }
+            }
+
+            // 3. Sincronizar Clientes
+            const cloudClients = (cloudData && Array.isArray(cloudData.clients)) ? cloudData.clients : [];
+            const mergedClients = [...localClients];
+
+            for (const cClient of cloudClients) {
+                const index = mergedClients.findIndex(c => c.id === cClient.id);
+                if (index === -1) {
+                    mergedClients.push(cClient);
+                    await LaudoDB.putLocal('clients', cClient);
+                }
+            }
+
+            for (const lClient of localClients) {
+                if (!cloudClients.some(c => c.id === lClient.id)) {
+                    hasNewLocalData = true;
+                }
+            }
+
+            // Se houver novos itens locais ou mesclados, atualizar nuvem
+            if (hasNewLocalData || cloudUsers.length < mergedUsers.length || cloudLaudos.length < mergedLaudos.length || cloudClients.length < mergedClients.length) {
+                await updateCloudData({
+                    users: mergedUsers,
+                    laudos: mergedLaudos,
+                    clients: mergedClients
+                });
+            }
+        } catch (err) {
+            console.warn('[CloudSync] Erro na sincronização:', err);
+        } finally {
+            isSyncing = false;
+        }
+    }
+
+    // Iniciar sincronização automática ao carregar e a cada 15 segundos
+    setTimeout(() => syncAll(), 500);
+    setInterval(() => syncAll(), 15000);
+
+    return {
+        syncAll
     };
 })();
 
