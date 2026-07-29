@@ -353,10 +353,32 @@ const AuthManager = (function () {
                 const emailSnapshot = await dbFirebase.collection('users').where('email', '==', cleanEmail).get();
                 if (!emailSnapshot.empty) {
                     const userData = emailSnapshot.docs[0].data();
-                    userData.id = emailSnapshot.docs[0].id;
+                    const oldId = emailSnapshot.docs[0].id;
                     const { password, ...safeData } = userData;
+
                     await dbFirebase.collection('users').doc(uid).set({ ...safeData, id: uid, firebaseUid: uid });
-                    await dbFirebase.collection('users').doc(userData.id).delete();
+                    await dbFirebase.collection('users').doc(oldId).delete();
+
+                    const consultantUpdates = await dbFirebase.collection('users').where('coordinatorId', '==', oldId).get();
+                    for (const doc of consultantUpdates.docs) {
+                        await doc.ref.update({ coordinatorId: uid });
+                    }
+
+                    const laudoAuthorUpdates = await dbFirebase.collection('laudos').where('authorId', '==', oldId).get();
+                    for (const doc of laudoAuthorUpdates.docs) {
+                        await doc.ref.update({ authorId: uid });
+                    }
+
+                    const laudoCoordUpdates = await dbFirebase.collection('laudos').where('coordinatorId', '==', oldId).get();
+                    for (const doc of laudoCoordUpdates.docs) {
+                        await doc.ref.update({ coordinatorId: uid });
+                    }
+
+                    const clientUpdates = await dbFirebase.collection('clients').where('userId', '==', oldId).get();
+                    for (const doc of clientUpdates.docs) {
+                        await doc.ref.update({ userId: uid });
+                    }
+
                     userData.id = uid;
                     await LaudoDB.putLocal('users', userData);
                     AuthManager.setCurrentUser(userData);
