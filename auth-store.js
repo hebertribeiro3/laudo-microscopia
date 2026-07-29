@@ -130,8 +130,12 @@ const LaudoDB = (function () {
             return res;
         },
         deleteLaudo: async (id) => {
-            const res = await remove('laudos', id);
-            FirebaseSync.removeItem('laudos', id);
+            const laudos = await getAll('laudos');
+            const laudo = laudos.find(l => l.id === id);
+            if (!laudo) return false;
+            laudo.deletedAt = new Date().toISOString();
+            const res = await put('laudos', laudo);
+            FirebaseSync.pushItem('laudos', laudo);
             return res;
         },
         getClients: async () => {
@@ -502,17 +506,19 @@ const AuthManager = (function () {
             const userIds = [user.id];
             if (user.previousId) userIds.push(user.previousId);
 
+            const active = laudos.filter(l => !l.deletedAt);
+
             if (user.role === 'coordenador') {
                 const allUsers = await LaudoDB.getUsers();
                 const teamIds = allUsers
                     .filter(u => (u.role === 'consultor' || u.role === 'admin') && userIds.includes(u.coordinatorId))
                     .map(u => u.id);
 
-                return laudos.filter(l => userIds.includes(l.authorId) || teamIds.includes(l.authorId) || userIds.includes(l.coordinatorId));
+                return active.filter(l => userIds.includes(l.authorId) || teamIds.includes(l.authorId) || userIds.includes(l.coordinatorId));
             }
 
             if (user.role === 'consultor') {
-                return laudos.filter(l => l.authorId === user.id);
+                return active.filter(l => l.authorId === user.id);
             }
 
             return [];
