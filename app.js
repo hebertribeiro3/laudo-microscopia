@@ -1655,7 +1655,9 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('user-edit-id').value = found.id;
         document.getElementById('user-input-name').value = found.name;
         document.getElementById('user-input-email').value = found.email;
-        document.getElementById('user-input-pass').value = found.password;
+        document.getElementById('user-input-pass').value = '';
+        document.getElementById('user-input-pass').placeholder = 'Deixe em branco para manter';
+        document.getElementById('user-input-pass').required = false;
         document.getElementById('user-input-role').value = found.role;
         document.getElementById('user-input-coord').value = found.coordinatorId || '';
 
@@ -1691,6 +1693,8 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('user-input-name').value = '';
         document.getElementById('user-input-email').value = '';
         document.getElementById('user-input-pass').value = '123';
+        document.getElementById('user-input-pass').placeholder = 'Senha inicial';
+        document.getElementById('user-input-pass').required = true;
         document.getElementById('user-input-role').value = 'consultor';
         document.getElementById('user-input-coord').value = '';
         toggleGroupCoordSelect();
@@ -1711,16 +1715,49 @@ document.addEventListener('DOMContentLoaded', () => {
             const role = document.getElementById('user-input-role').value;
             const coordId = document.getElementById('user-input-coord').value || null;
 
-            const newUser = {
-                id: editId || ('usr_' + Date.now()),
-                name,
-                email,
-                password: pass,
-                role,
-                coordinatorId: role === 'consultor' ? coordId : null
-            };
+            if (editId) {
+                const userData = {
+                    name,
+                    email,
+                    role,
+                    coordinatorId: role === 'consultor' ? coordId : null
+                };
+                const dbFirebase = window.dbFirebase;
+                if (dbFirebase) {
+                    try {
+                        await dbFirebase.collection('users').doc(editId).set(userData, { merge: true });
+                    } catch (err) {
+                        showToast('Erro ao salvar no Firestore: ' + err.message, 'error');
+                        return;
+                    }
+                }
+            } else {
+                if (!pass || pass.length < 3) {
+                    showToast('Defina uma senha de no mínimo 3 caracteres para o novo usuário.', 'error');
+                    return;
+                }
+                if (typeof firebase !== 'undefined' && firebase.auth && window.dbFirebase) {
+                    try {
+                        const cred = await firebase.auth().createUserWithEmailAndPassword(email, pass);
+                        const uid = cred.user.uid;
+                        const newUser = {
+                            id: uid,
+                            name,
+                            email,
+                            role,
+                            coordinatorId: role === 'consultor' ? coordId : null
+                        };
+                        await window.dbFirebase.collection('users').doc(uid).set(newUser);
+                    } catch (err) {
+                        showToast('Erro ao criar usuário: ' + (err.message || ''), 'error');
+                        return;
+                    }
+                } else {
+                    showToast('Firebase não disponível para criar usuário.', 'error');
+                    return;
+                }
+            }
 
-            await LaudoDB.saveUser(newUser);
             document.getElementById('form-user-edit').classList.add('hidden');
             showToast(`Usuário ${name} salvo com sucesso!`, 'success');
             renderUsersManagement();
