@@ -844,7 +844,9 @@ document.addEventListener('DOMContentLoaded', () => {
         let coordName = null;
         if (user.role === 'consultor' && user.coordinatorId) {
             const users = await LaudoDB.getUsers();
-            const coord = users.find(u => u.id === user.coordinatorId);
+            const coordIds = [user.coordinatorId];
+            if (user.previousId) coordIds.push(user.previousId);
+            const coord = users.find(u => coordIds.includes(u.id) || coordIds.includes(u.previousId));
             if (coord) coordName = coord.name;
         }
 
@@ -1774,8 +1776,11 @@ document.addEventListener('DOMContentLoaded', () => {
         const currentUser = AuthManager.getCurrentUser();
         if (!currentUser || currentUser.role !== 'coordenador') return;
 
+        const userIds = [currentUser.id];
+        if (currentUser.previousId) userIds.push(currentUser.previousId);
+
         const allUsers = await LaudoDB.getUsers();
-        const team = allUsers.filter(u => u.role === 'consultor' && u.coordinatorId === currentUser.id);
+        const team = allUsers.filter(u => u.role === 'consultor' && userIds.includes(u.coordinatorId));
         const laudos = await LaudoDB.getLaudos();
 
         if (team.length === 0) {

@@ -356,27 +356,20 @@ const AuthManager = (function () {
                     const oldId = emailSnapshot.docs[0].id;
                     const { password, ...safeData } = userData;
 
-                    await dbFirebase.collection('users').doc(uid).set({ ...safeData, id: uid, firebaseUid: uid });
+                    await dbFirebase.collection('users').doc(uid).set({ ...safeData, id: uid, firebaseUid: uid, previousId: oldId });
                     await dbFirebase.collection('users').doc(oldId).delete();
 
-                    const consultantUpdates = await dbFirebase.collection('users').where('coordinatorId', '==', oldId).get();
-                    for (const doc of consultantUpdates.docs) {
-                        await doc.ref.update({ coordinatorId: uid });
-                    }
-
-                    const laudoAuthorUpdates = await dbFirebase.collection('laudos').where('authorId', '==', oldId).get();
-                    for (const doc of laudoAuthorUpdates.docs) {
-                        await doc.ref.update({ authorId: uid });
-                    }
-
-                    const laudoCoordUpdates = await dbFirebase.collection('laudos').where('coordinatorId', '==', oldId).get();
-                    for (const doc of laudoCoordUpdates.docs) {
-                        await doc.ref.update({ coordinatorId: uid });
-                    }
-
-                    const clientUpdates = await dbFirebase.collection('clients').where('userId', '==', oldId).get();
-                    for (const doc of clientUpdates.docs) {
-                        await doc.ref.update({ userId: uid });
+                    const refs = [
+                        { collection: 'users', field: 'coordinatorId', oldVal: oldId, newVal: uid },
+                        { collection: 'laudos', field: 'authorId', oldVal: oldId, newVal: uid },
+                        { collection: 'laudos', field: 'coordinatorId', oldVal: oldId, newVal: uid },
+                        { collection: 'clients', field: 'userId', oldVal: oldId, newVal: uid },
+                    ];
+                    for (const ref of refs) {
+                        const snap = await dbFirebase.collection(ref.collection).where(ref.field, '==', ref.oldVal).get();
+                        for (const d of snap.docs) {
+                            await d.ref.update({ [ref.field]: ref.newVal });
+                        }
                     }
 
                     userData.id = uid;
@@ -500,13 +493,16 @@ const AuthManager = (function () {
                 return laudos;
             }
 
+            const userIds = [user.id];
+            if (user.previousId) userIds.push(user.previousId);
+
             if (user.role === 'coordenador') {
                 const allUsers = await LaudoDB.getUsers();
                 const myConsultantIds = allUsers
-                    .filter(u => u.role === 'consultor' && u.coordinatorId === user.id)
+                    .filter(u => u.role === 'consultor' && userIds.includes(u.coordinatorId))
                     .map(u => u.id);
 
-                return laudos.filter(l => l.authorId === user.id || myConsultantIds.includes(l.authorId) || l.coordinatorId === user.id);
+                return laudos.filter(l => userIds.includes(l.authorId) || myConsultantIds.includes(l.authorId) || userIds.includes(l.coordinatorId));
             }
 
             if (user.role === 'consultor') {
@@ -519,12 +515,15 @@ const AuthManager = (function () {
         filterAccessibleUsers: async (users, currentUser) => {
             if (!currentUser) return [];
 
+            const userIds = [currentUser.id];
+            if (currentUser.previousId) userIds.push(currentUser.previousId);
+
             if (currentUser.role === 'admin') {
                 return users;
             }
 
             if (currentUser.role === 'coordenador') {
-                return users.filter(u => u.id === currentUser.id || (u.role === 'consultor' && u.coordinatorId === currentUser.id));
+                return users.filter(u => userIds.includes(u.id) || (u.role === 'consultor' && userIds.includes(u.coordinatorId)));
             }
 
             if (currentUser.role === 'consultor') {
