@@ -338,7 +338,29 @@ const AuthManager = (function () {
             }
 
             try {
-                const cred = await firebase.auth().signInWithEmailAndPassword(cleanEmail, password);
+                let cred;
+                try {
+                    cred = await firebase.auth().signInWithEmailAndPassword(cleanEmail, password);
+                } catch (authErr) {
+                    // Fallback: usuário pode existir no Firestore mas não no Firebase Auth (sistema antigo)
+                    const legacySnapshot = await dbFirebase.collection('users').where('email', '==', cleanEmail).get();
+                    if (!legacySnapshot.empty) {
+                        const legacyData = legacySnapshot.docs[0].data();
+                        if (legacyData.password && legacyData.password === password) {
+                            const { password: _, ...cleanProfile } = legacyData;
+                            cred = await firebase.auth().createUserWithEmailAndPassword(cleanEmail, password);
+                            const uid = cred.user.uid;
+                            await dbFirebase.collection('users').doc(uid).set({ ...cleanProfile, id: uid, firebaseUid: uid });
+                            await dbFirebase.collection('users').doc(legacyData.id).delete();
+                            const userData = { ...cleanProfile, id: uid };
+                            await LaudoDB.putLocal('users', userData);
+                            AuthManager.setCurrentUser(userData);
+                            return { success: true, user: userData };
+                        }
+                    }
+                    throw authErr;
+                }
+
                 const uid = cred.user.uid;
 
                 // Buscar perfil no Firestore pelo UID (novos usuários)
@@ -351,13 +373,12 @@ const AuthManager = (function () {
                     return { success: true, user: userData };
                 }
 
-                // Buscar por email (usuários legados com ID antigo)
+                // Buscar por email (usuários legados com ID antigo já com Firebase Auth)
                 const snapshot = await dbFirebase.collection('users').where('email', '==', cleanEmail).get();
                 if (!snapshot.empty) {
                     const userData = snapshot.docs[0].data();
                     userData.id = snapshot.docs[0].id;
 
-                    // Migrar para o novo padrão (UID como doc ID, sem senha)
                     const { password, ...safeData } = userData;
                     await dbFirebase.collection('users').doc(uid).set({ ...safeData, id: uid, firebaseUid: uid });
                     await dbFirebase.collection('users').doc(userData.id).delete();
