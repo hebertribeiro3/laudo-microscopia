@@ -498,9 +498,17 @@ const AuthManager = (function () {
 
             if (user.role === 'coordenador') {
                 const allUsers = await LaudoDB.getUsers();
-                const myConsultantIds = allUsers
+                const validIds = allUsers.map(u => u.id);
+                let myConsultantIds = allUsers
                     .filter(u => u.role === 'consultor' && userIds.includes(u.coordinatorId))
                     .map(u => u.id);
+
+                if (myConsultantIds.length === 0) {
+                    const orphans = allUsers.filter(u =>
+                        u.role === 'consultor' && u.coordinatorId && !validIds.includes(u.coordinatorId)
+                    );
+                    myConsultantIds = orphans.map(u => u.id);
+                }
 
                 return laudos.filter(l => userIds.includes(l.authorId) || myConsultantIds.includes(l.authorId) || userIds.includes(l.coordinatorId));
             }

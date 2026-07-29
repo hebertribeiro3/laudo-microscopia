@@ -1776,14 +1776,45 @@ document.addEventListener('DOMContentLoaded', () => {
         const currentUser = AuthManager.getCurrentUser();
         if (!currentUser || currentUser.role !== 'coordenador') return;
 
+        const db = window.dbFirebase;
         const userIds = [currentUser.id];
         if (currentUser.previousId) userIds.push(currentUser.previousId);
 
         const allUsers = await LaudoDB.getUsers();
-        const team = allUsers.filter(u => u.role === 'consultor' && userIds.includes(u.coordinatorId));
+        let team = allUsers.filter(u => u.role === 'consultor' && userIds.includes(u.coordinatorId));
         const laudos = await LaudoDB.getLaudos();
 
-        if (team.length === 0) {
+        if (team.length === 0 && db) {
+            const validIds = allUsers.map(u => u.id);
+            const orphans = allUsers.filter(u =>
+                u.role === 'consultor' &&
+                u.coordinatorId &&
+                !validIds.includes(u.coordinatorId)
+            );
+            if (orphans.length > 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="4" style="text-align: center; color: var(--text-muted); padding: 20px;">
+                            <p>Nenhum consultor vinculado, mas encontramos ${orphans.length} consultor(es) com vínculo órfão.</p>
+                            <button type="button" class="btn-primary" id="btn-claim-orphans" style="padding: 8px 20px; font-size: 13px; margin-top: 8px;">
+                                <i class="fa-solid fa-link"></i> Vincular à minha coordenação
+                            </button>
+                        </td>
+                    </tr>
+                `;
+                document.getElementById('btn-claim-orphans')?.addEventListener('click', async () => {
+                    for (const o of orphans) {
+                        try {
+                            await db.collection('users').doc(o.id).update({ coordinatorId: currentUser.id });
+                        } catch (e) {
+                            console.warn('[Team] Erro ao vincular:', o.id, e);
+                        }
+                    }
+                    showToast(`${orphans.length} consultor(es) vinculado(s) à sua coordenação!`, 'success');
+                    renderTeamView();
+                });
+                return;
+            }
             tbody.innerHTML = `
                 <tr>
                     <td colspan="4" style="text-align: center; color: var(--text-muted); padding: 20px;">
