@@ -59,11 +59,24 @@ document.addEventListener('DOMContentLoaded', () => {
         "Solu Leaf": { microrganismo: "Bacillus velezensis", meio: "BAC" },
         "Solu Clean": { microrganismo: "Bacillus pumillus", meio: "BAC" },
         "Solu Strong": { microrganismo: "Bacillus amyloliquefaciens", meio: "BAC" },
-        "Bio ND": { microrganismo: "Bradyrhizobium japonicum", meio: "Não se aplica" },
-        "Bio AZ": { microrganismo: "Azospirillum brasilense", meio: "Não se aplica" },
-        "Tec White": { microrganismo: "Beauveria bassian", meio: "WHITE" },
-        "Tec Isaria": { microrganismo: "Cordyceps fumosorosea = Isaria fumusorosea", meio: "Não se aplica" }
+        "Bio ND": { microrganismo: "Bradyrhizobium japonicum", meio: "RZB" },
+        "Bio AZ": { microrganismo: "Azospirillum brasilense", meio: "AZ" },
+        "Tec White": { microrganismo: "Beauveria bassiana", meio: "WHITE" },
+        "Tec Isaria": { microrganismo: "Cordyceps fumosorosea", meio: "ISARIA" }
     };
+
+    // Clientes Padrão (extraídos do arquivo Dados.xlsx - exibidos apenas para Administradores)
+    const DADOS_PREDEFINED_CLIENTS = [
+        "Gilson Adriano Bomfim - Fazenda Sagrada Fámilia",
+        "Marcelo Isoton - Fazenda Reaconquista II",
+        "SLC- Fazenda Pamplona I",
+        "Lauri Pooz - Fazenda Sete Irmão",
+        "Marcus Vinicius - Fazenda Aroeira",
+        "Flávio Gilberto Kist - Fazenda Cupim",
+        "Irineu Renato - Fazenda Pérola do Sul",
+        "Agrícola Werhmann",
+        "Willian Matté - Grupo MEC"
+    ];
 
     // ----------------------------------------------------
     // Utility Functions
@@ -1241,7 +1254,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Populate Client Select Box strictly with User's Personal Clients
+    // Populate Client Select Box strictly with User's Personal Clients (e Clientes Padrão de Dados se Admin)
     async function populateClientDropdown() {
         const user = AuthManager.getCurrentUser();
         if (!user) return;
@@ -1262,7 +1275,20 @@ document.addEventListener('DOMContentLoaded', () => {
                 html += `<option value="${c.name}">${c.name}</option>`;
             });
             html += '</optgroup>';
-        } else {
+        }
+
+        // Se for ADMINISTRADOR, exibir também os clientes padrão do arquivo Dados.xlsx
+        if (user.role === 'admin') {
+            html += '<optgroup label="📋 Clientes Padrão (Dados)">';
+            DADOS_PREDEFINED_CLIENTS.forEach(clientName => {
+                if (!myClients.some(c => c.name === clientName)) {
+                    html += `<option value="${clientName}">${clientName}</option>`;
+                }
+            });
+            html += '</optgroup>';
+        }
+
+        if (myClients.length === 0 && user.role !== 'admin') {
             html += '<option value="" disabled>Nenhum cliente cadastrado ainda. Adicione o 1º cliente!</option>';
         }
 
@@ -1276,6 +1302,9 @@ document.addEventListener('DOMContentLoaded', () => {
     async function checkFirstLoginClients() {
         const user = AuthManager.getCurrentUser();
         if (!user) return;
+
+        // Admins já possuem os clientes do arquivo Dados.xlsx disponíveis
+        if (user.role === 'admin') return;
 
         const allClients = await LaudoDB.getClients();
         const myClients = allClients.filter(c => c.userId === user.id);
