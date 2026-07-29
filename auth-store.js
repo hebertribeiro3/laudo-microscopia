@@ -342,23 +342,21 @@ const AuthManager = (function () {
                 const uid = cred.user.uid;
 
                 const userDoc = await dbFirebase.collection('users').doc(uid).get();
-                if (userDoc.exists) {
-                    const userData = userDoc.data();
-                    userData.id = userDoc.id;
-                    await LaudoDB.putLocal('users', userData);
-                    AuthManager.setCurrentUser(userData);
-                    return { success: true, user: userData };
-                }
+                let userData;
 
-                const emailSnapshot = await dbFirebase.collection('users').where('email', '==', cleanEmail).get();
-                if (!emailSnapshot.empty) {
-                    const userData = emailSnapshot.docs[0].data();
+                if (userDoc.exists) {
+                    userData = userDoc.data();
+                    userData.id = userDoc.id;
+                } else {
+                    const emailSnapshot = await dbFirebase.collection('users').where('email', '==', cleanEmail).get();
+                    if (emailSnapshot.empty) {
+                        return { success: false, message: 'Seu e-mail não foi encontrado no sistema. Contate o administrador.' };
+                    }
+                    userData = emailSnapshot.docs[0].data();
                     const oldId = emailSnapshot.docs[0].id;
                     const { password, ...safeData } = userData;
-
                     await dbFirebase.collection('users').doc(uid).set({ ...safeData, id: uid, firebaseUid: uid, previousId: oldId });
                     await dbFirebase.collection('users').doc(oldId).delete();
-
                     const refs = [
                         { collection: 'users', field: 'coordinatorId', oldVal: oldId, newVal: uid },
                         { collection: 'laudos', field: 'authorId', oldVal: oldId, newVal: uid },
@@ -371,14 +369,22 @@ const AuthManager = (function () {
                             await d.ref.update({ [ref.field]: ref.newVal });
                         }
                     }
-
                     userData.id = uid;
-                    await LaudoDB.putLocal('users', userData);
-                    AuthManager.setCurrentUser(userData);
-                    return { success: true, user: userData };
                 }
 
-                return { success: false, message: 'Seu e-mail não foi encontrado no sistema. Contate o administrador.' };
+                const allUsers = await dbFirebase.collection('users').get();
+                const validIds = new Set(allUsers.docs.map(d => d.id));
+                const emailPrefix = cleanEmail.split('@')[0].split('.')[0];
+                for (const doc of allUsers.docs) {
+                    const c = doc.data();
+                    if (c.role === 'consultor' && c.coordinatorId && !validIds.has(c.coordinatorId) && c.coordinatorId.includes(emailPrefix)) {
+                        await doc.ref.update({ coordinatorId: uid });
+                    }
+                }
+
+                await LaudoDB.putLocal('users', userData);
+                AuthManager.setCurrentUser(userData);
+                return { success: true, user: userData };
             } catch (err) {
                 const msg = err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password' || err.code === 'auth/invalid-credential'
                     ? 'E-mail ou senha incorretos.'
