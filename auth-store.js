@@ -353,37 +353,56 @@ const AuthManager = (function () {
                     userData.id = userDoc.id;
                 } else {
                     const emailSnapshot = await dbFirebase.collection('users').where('email', '==', cleanEmail).get();
-                    if (emailSnapshot.empty) {
-                        return { success: false, message: 'E-mail ou senha incorretos.' };
-                    }
-                    userData = emailSnapshot.docs[0].data();
-                    const oldId = emailSnapshot.docs[0].id;
-                    const { password, ...safeData } = userData;
-                    await dbFirebase.collection('users').doc(uid).set({ ...safeData, id: uid, firebaseUid: uid, previousId: oldId });
-                    await dbFirebase.collection('users').doc(oldId).delete();
-                    const refs = [
-                        { collection: 'users', field: 'coordinatorId', oldVal: oldId, newVal: uid },
-                        { collection: 'laudos', field: 'authorId', oldVal: oldId, newVal: uid },
-                        { collection: 'laudos', field: 'coordinatorId', oldVal: oldId, newVal: uid },
-                        { collection: 'clients', field: 'userId', oldVal: oldId, newVal: uid },
-                    ];
-                    for (const ref of refs) {
-                        const snap = await dbFirebase.collection(ref.collection).where(ref.field, '==', ref.oldVal).get();
-                        for (const d of snap.docs) {
-                            await d.ref.update({ [ref.field]: ref.newVal });
+                    if (!emailSnapshot.empty) {
+                        userData = emailSnapshot.docs[0].data();
+                        const oldId = emailSnapshot.docs[0].id;
+                        const { password, ...safeData } = userData;
+                        await dbFirebase.collection('users').doc(uid).set({ ...safeData, id: uid, firebaseUid: uid, previousId: oldId });
+                        await dbFirebase.collection('users').doc(oldId).delete();
+                        const refs = [
+                            { collection: 'users', field: 'coordinatorId', oldVal: oldId, newVal: uid },
+                            { collection: 'laudos', field: 'authorId', oldVal: oldId, newVal: uid },
+                            { collection: 'laudos', field: 'coordinatorId', oldVal: oldId, newVal: uid },
+                            { collection: 'clients', field: 'userId', oldVal: oldId, newVal: uid },
+                        ];
+                        for (const ref of refs) {
+                            try {
+                                const snap = await dbFirebase.collection(ref.collection).where(ref.field, '==', ref.oldVal).get();
+                                for (const d of snap.docs) {
+                                    await d.ref.update({ [ref.field]: ref.newVal });
+                                }
+                            } catch (errRef) {
+                                console.warn('[AuthManager] Erro ao atualizar referências antigas:', errRef);
+                            }
                         }
+                        userData.id = uid;
+                    } else {
+                        // Perfil fallback caso usuário exista no Auth mas ainda não no Firestore
+                        userData = {
+                            id: uid,
+                            email: cleanEmail,
+                            name: cleanEmail.split('@')[0].toUpperCase(),
+                            role: 'consultor',
+                            coordinatorId: null,
+                            mustChangePassword: false
+                        };
+                        await dbFirebase.collection('users').doc(uid).set(userData);
                     }
-                    userData.id = uid;
                 }
 
-                const allUsers = await dbFirebase.collection('users').get();
-                const validIds = new Set(allUsers.docs.map(d => d.id));
-                const emailPrefix = cleanEmail.split('@')[0].split('.')[0];
-                for (const doc of allUsers.docs) {
-                    const user = doc.data();
-                    if (user.coordinatorId && !validIds.has(user.coordinatorId) && user.coordinatorId.includes(emailPrefix)) {
-                        await doc.ref.update({ coordinatorId: uid });
+                // Tentar vincular coordenadores de forma segura (sem travar o login em caso de falha de permissão)
+                try {
+                    const allUsers = await dbFirebase.collection('users').get();
+                    const validIds = new Set(allUsers.docs.map(d => d.id));
+                    const emailPrefix = cleanEmail.split('@')[0].split('.')[0];
+                    for (const doc of allUsers.docs) {
+                        const user = doc.data();
+                        if (user.coordinatorId && !validIds.has(user.coordinatorId) && user.coordinatorId.includes(emailPrefix)) {
+                            await doc.ref.update({ coordinatorId: uid });
+                        }
                     }
+                } catch (errSync) {
+                    console.warn('[AuthManager] Sincronização secundária de usuários ignorada:', errSync);
                 }
 
                 await LaudoDB.putLocal('users', userData);

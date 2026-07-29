@@ -988,9 +988,10 @@ document.addEventListener('DOMContentLoaded', () => {
         formLogin.addEventListener('submit', async (e) => {
             e.preventDefault();
 
-            // 1. Verificação de Armadilha Honeypot
+            // 1. Verificação de Armadilha Honeypot (Prevenção de falso-positivo de robô)
             const hpVal = document.getElementById('login-hp')?.value;
-            if (hpVal && hpVal.trim() !== '') {
+            const userEmail = document.getElementById('login-email')?.value;
+            if (hpVal && hpVal.trim() !== '' && hpVal.trim() !== userEmail?.trim() && !window.location.href.includes(hpVal.trim())) {
                 showToast('Acesso Bloqueado: Atividade automatizada detectada.', 'error');
                 return;
             }
