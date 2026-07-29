@@ -354,7 +354,7 @@ const AuthManager = (function () {
                 } else {
                     const emailSnapshot = await dbFirebase.collection('users').where('email', '==', cleanEmail).get();
                     if (emailSnapshot.empty) {
-                        return { success: false, message: 'Seu e-mail não foi encontrado no sistema. Contate o administrador.' };
+                        return { success: false, message: 'E-mail ou senha incorretos.' };
                     }
                     userData = emailSnapshot.docs[0].data();
                     const oldId = emailSnapshot.docs[0].id;

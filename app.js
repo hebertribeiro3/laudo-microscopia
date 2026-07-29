@@ -79,6 +79,16 @@ document.addEventListener('DOMContentLoaded', () => {
         return dateStr;
     }
 
+    function escapeHTML(str) {
+        if (str == null) return '';
+        return String(str)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;');
+    }
+
     // Set preview text value
     function setPreviewVal(id, val, isItalic = false) {
         const el = document.getElementById(`val-${id}`);
@@ -1182,9 +1192,9 @@ document.addEventListener('DOMContentLoaded', () => {
         bar.innerHTML = `
             <div class="user-top-row">
                 <div class="user-info">
-                    <div class="user-avatar">${firstLetter}</div>
+                    <div class="user-avatar">${escapeHTML(firstLetter)}</div>
                     <div class="user-details">
-                        <span class="user-name" title="${user.name}">${user.name}</span>
+                        <span class="user-name" title="${escapeHTML(user.name)}">${escapeHTML(user.name)}</span>
                         <span class="user-role-badge ${roleBadgeClass}">
                             <i class="fa-solid ${roleIcon}"></i> ${roleLabel}
                         </span>
@@ -1300,13 +1310,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
         tbody.innerHTML = myClients.map(c => `
             <tr>
-                <td><strong>${c.name}</strong></td>
+                <td><strong>${escapeHTML(c.name)}</strong></td>
                 <td style="text-align: right;">
                     <div class="table-actions" style="justify-content: flex-end;">
-                        <button type="button" class="btn-sm-action btn-view" onclick="editClientFromTable('${c.id}')" title="Editar">
+                        <button type="button" class="btn-sm-action btn-view" onclick="editClientFromTable('${escapeHTML(c.id)}')" title="Editar">
                             <i class="fa-solid fa-pen"></i> Editar
                         </button>
-                        <button type="button" class="btn-sm-action btn-del" onclick="deleteClientFromTable('${c.id}')" title="Excluir">
+                        <button type="button" class="btn-sm-action btn-del" onclick="deleteClientFromTable('${escapeHTML(c.id)}')" title="Excluir">
                             <i class="fa-solid fa-trash"></i> Excluir
                         </button>
                     </div>
@@ -1467,7 +1477,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const usr = allUsers.find(u => u.id === authId);
                 const laudoSample = accessibleLaudos.find(l => l.authorId === authId);
                 const name = usr ? usr.name : (laudoSample ? `${laudoSample.authorName} (Ex-Usuário)` : 'Desconhecido');
-                optionsHTML += `<option value="${authId}">${name}</option>`;
+                optionsHTML += `<option value="${escapeHTML(authId)}">${escapeHTML(name)}</option>`;
             });
             authorSelect.innerHTML = optionsHTML;
         }
@@ -1522,26 +1532,27 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 const formattedDate = l.data_emissao ? formatDate(l.data_emissao) : '-';
                 const isUserActive = allUsers.some(u => u.id === l.authorId);
-                const authorDisplay = l.authorName ? (isUserActive ? l.authorName : `${l.authorName} <span style="font-size:10px; color:#64748b;">(Ex-Usuário)</span>`) : '-';
+                const authorNameSafe = escapeHTML(l.authorName || '-');
+                const authorDisplay = isUserActive ? authorNameSafe : `${authorNameSafe} <span style="font-size:10px; color:#64748b;">(Ex-Usuário)</span>`;
 
                 return `
                     <tr>
-                        <td><strong>${l.relatorio_num || '-'}</strong></td>
-                        <td>${l.cliente_fazenda || '-'}</td>
-                        <td>${l.nome_produto || '-'}</td>
-                        <td><em style="color: #004d20;">${l.microrganismo || '-'}</em></td>
-                        <td>${formattedDate}</td>
+                        <td><strong>${escapeHTML(l.relatorio_num || '-')}</strong></td>
+                        <td>${escapeHTML(l.cliente_fazenda || '-')}</td>
+                        <td>${escapeHTML(l.nome_produto || '-')}</td>
+                        <td><em style="color: #004d20;">${escapeHTML(l.microrganismo || '-')}</em></td>
+                        <td>${escapeHTML(formattedDate)}</td>
                         <td>${authorDisplay}</td>
                         <td><span class="user-role-badge ${roleClass}" style="font-size: 8px;">${roleLabel}</span></td>
                         <td style="text-align: right;">
                             <div class="table-actions" style="justify-content: flex-end;">
-                                <button type="button" class="btn-sm-action btn-view" onclick="loadLaudoFromRepository('${l.id}')" title="Editar / Carregar">
+                                <button type="button" class="btn-sm-action btn-view" onclick="loadLaudoFromRepository('${escapeHTML(l.id)}')" title="Editar / Carregar">
                                     <i class="fa-solid fa-pen-to-square"></i> Editar
                                 </button>
-                                <button type="button" class="btn-sm-action btn-print-sm" onclick="printLaudoFromRepository('${l.id}')" title="Imprimir PDF">
+                                <button type="button" class="btn-sm-action btn-print-sm" onclick="printLaudoFromRepository('${escapeHTML(l.id)}')" title="Imprimir PDF">
                                     <i class="fa-solid fa-print"></i> PDF
                                 </button>
-                                <button type="button" class="btn-sm-action btn-del" onclick="deleteLaudoFromRepository('${l.id}')" title="Excluir">
+                                <button type="button" class="btn-sm-action btn-del" onclick="deleteLaudoFromRepository('${escapeHTML(l.id)}')" title="Excluir">
                                     <i class="fa-solid fa-trash"></i>
                                 </button>
                             </div>
@@ -1622,22 +1633,22 @@ document.addEventListener('DOMContentLoaded', () => {
             let coordName = '-';
             if (u.coordinatorId) {
                 const c = users.find(x => x.id === u.coordinatorId);
-                if (c) coordName = c.name;
+                if (c) coordName = escapeHTML(c.name);
             }
 
             return `
                 <tr>
-                    <td><strong>${u.name}</strong></td>
-                    <td>${u.email}</td>
+                    <td><strong>${escapeHTML(u.name)}</strong></td>
+                    <td>${escapeHTML(u.email)}</td>
                     <td><span class="user-role-badge ${roleClass}">${roleLabel}</span></td>
                     <td>${coordName}</td>
                     <td style="text-align: right;">
                         <div class="table-actions" style="justify-content: flex-end;">
-                            <button type="button" class="btn-sm-action btn-view" onclick="editUserFromTable('${u.id}')" title="Editar">
+                            <button type="button" class="btn-sm-action btn-view" onclick="editUserFromTable('${escapeHTML(u.id)}')" title="Editar">
                                 <i class="fa-solid fa-pen"></i> Editar
                             </button>
                             ${u.role !== 'admin' ? `
-                                <button type="button" class="btn-sm-action btn-del" onclick="deleteUserFromTable('${u.id}')" title="Excluir">
+                                <button type="button" class="btn-sm-action btn-del" onclick="deleteUserFromTable('${escapeHTML(u.id)}')" title="Excluir">
                                     <i class="fa-solid fa-trash"></i> Excluir
                                 </button>
                             ` : ''}
@@ -1840,11 +1851,11 @@ document.addEventListener('DOMContentLoaded', () => {
             const count = laudos.filter(l => l.authorId === c.id).length;
             return `
                 <tr>
-                    <td><strong>${c.name}</strong></td>
-                    <td>${c.email}</td>
+                    <td><strong>${escapeHTML(c.name)}</strong></td>
+                    <td>${escapeHTML(c.email)}</td>
                     <td style="text-align: center;"><strong>${count}</strong> laudos</td>
                     <td style="text-align: right;">
-                        <button type="button" class="btn-sm-action btn-view" onclick="openConsultantLaudos('${c.id}')">
+                        <button type="button" class="btn-sm-action btn-view" onclick="openConsultantLaudos('${escapeHTML(c.id)}')">
                             <i class="fa-solid fa-folder-open"></i> Ver Laudos
                         </button>
                     </td>
@@ -1880,7 +1891,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (type === 'error') icon = 'fa-circle-xmark';
         if (type === 'info') icon = 'fa-circle-info';
 
-        toast.innerHTML = `<i class="fa-solid ${icon}"></i> <span>${message}</span>`;
+        toast.innerHTML = `<i class="fa-solid ${icon}"></i> <span>${escapeHTML(message)}</span>`;
         container.appendChild(toast);
 
         setTimeout(() => {
