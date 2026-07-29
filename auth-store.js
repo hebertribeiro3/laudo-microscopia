@@ -382,6 +382,15 @@ const AuthManager = (function () {
                     }
                 }
 
+                if (userData.role === 'admin' && !userData.coordinatorId) {
+                    const coordSnapshot = await dbFirebase.collection('users').where('role', '==', 'coordenador').get();
+                    if (coordSnapshot.size === 1) {
+                        const coordId = coordSnapshot.docs[0].id;
+                        await dbFirebase.collection('users').doc(uid).update({ coordinatorId: coordId });
+                        userData.coordinatorId = coordId;
+                    }
+                }
+
                 await LaudoDB.putLocal('users', userData);
                 AuthManager.setCurrentUser(userData);
                 return { success: true, user: userData };

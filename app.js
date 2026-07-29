@@ -1653,6 +1653,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const found = users.find(u => u.id === id);
         if (!found) return;
 
+        await populateCoordSelect();
         document.getElementById('user-form-title').textContent = 'Editar Usuário';
         document.getElementById('user-edit-id').value = found.id;
         document.getElementById('user-input-name').value = found.name;
@@ -1678,10 +1679,19 @@ document.addEventListener('DOMContentLoaded', () => {
     const formUserEdit = document.getElementById('form-user-edit');
     const roleSelect = document.getElementById('user-input-role');
 
+    async function populateCoordSelect() {
+        const select = document.getElementById('user-input-coord');
+        if (!select) return;
+        const users = await LaudoDB.getUsers();
+        const coords = users.filter(u => u.role === 'coordenador');
+        select.innerHTML = '<option value="">Nenhum (Independente)</option>' +
+            coords.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+    }
+
     function toggleGroupCoordSelect() {
         const group = document.getElementById('group-coord-select');
         if (group && roleSelect) {
-            group.style.display = (roleSelect.value === 'consultor') ? 'block' : 'none';
+            group.style.display = (roleSelect.value === 'consultor' || roleSelect.value === 'admin') ? 'block' : 'none';
         }
     }
 
@@ -1689,7 +1699,8 @@ document.addEventListener('DOMContentLoaded', () => {
         roleSelect.addEventListener('change', toggleGroupCoordSelect);
     }
 
-    document.getElementById('btn-show-add-user')?.addEventListener('click', () => {
+    document.getElementById('btn-show-add-user')?.addEventListener('click', async () => {
+        await populateCoordSelect();
         document.getElementById('user-form-title').textContent = 'Cadastrar Novo Usuário';
         document.getElementById('user-edit-id').value = '';
         document.getElementById('user-input-name').value = '';
@@ -1722,7 +1733,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     name,
                     email,
                     role,
-                    coordinatorId: role === 'consultor' ? coordId : null
+                    coordinatorId: (role === 'consultor' || role === 'admin') ? coordId : null
                 };
                 const dbFirebase = window.dbFirebase;
                 if (dbFirebase) {
@@ -1747,7 +1758,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             name,
                             email,
                             role,
-                            coordinatorId: role === 'consultor' ? coordId : null
+                            coordinatorId: (role === 'consultor' || role === 'admin') ? coordId : null
                         };
                         await window.dbFirebase.collection('users').doc(uid).set(newUser);
                     } catch (err) {
