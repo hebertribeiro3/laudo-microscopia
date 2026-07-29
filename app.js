@@ -1781,13 +1781,13 @@ document.addEventListener('DOMContentLoaded', () => {
         if (currentUser.previousId) userIds.push(currentUser.previousId);
 
         const allUsers = await LaudoDB.getUsers();
-        let team = allUsers.filter(u => u.role === 'consultor' && userIds.includes(u.coordinatorId));
+        let team = allUsers.filter(u => (u.role === 'consultor' || u.role === 'admin') && userIds.includes(u.coordinatorId));
         const laudos = await LaudoDB.getLaudos();
 
         if (team.length === 0 && db) {
             const validIds = allUsers.map(u => u.id);
             const orphans = allUsers.filter(u =>
-                u.role === 'consultor' &&
+                (u.role === 'consultor' || u.role === 'admin') &&
                 u.coordinatorId &&
                 !validIds.includes(u.coordinatorId)
             );

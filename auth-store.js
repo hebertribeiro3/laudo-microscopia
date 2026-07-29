@@ -376,8 +376,8 @@ const AuthManager = (function () {
                 const validIds = new Set(allUsers.docs.map(d => d.id));
                 const emailPrefix = cleanEmail.split('@')[0].split('.')[0];
                 for (const doc of allUsers.docs) {
-                    const c = doc.data();
-                    if (c.role === 'consultor' && c.coordinatorId && !validIds.has(c.coordinatorId) && c.coordinatorId.includes(emailPrefix)) {
+                    const user = doc.data();
+                    if (user.coordinatorId && !validIds.has(user.coordinatorId) && user.coordinatorId.includes(emailPrefix)) {
                         await doc.ref.update({ coordinatorId: uid });
                     }
                 }
@@ -504,19 +504,11 @@ const AuthManager = (function () {
 
             if (user.role === 'coordenador') {
                 const allUsers = await LaudoDB.getUsers();
-                const validIds = allUsers.map(u => u.id);
-                let myConsultantIds = allUsers
-                    .filter(u => u.role === 'consultor' && userIds.includes(u.coordinatorId))
+                const teamIds = allUsers
+                    .filter(u => (u.role === 'consultor' || u.role === 'admin') && userIds.includes(u.coordinatorId))
                     .map(u => u.id);
 
-                if (myConsultantIds.length === 0) {
-                    const orphans = allUsers.filter(u =>
-                        u.role === 'consultor' && u.coordinatorId && !validIds.includes(u.coordinatorId)
-                    );
-                    myConsultantIds = orphans.map(u => u.id);
-                }
-
-                return laudos.filter(l => userIds.includes(l.authorId) || myConsultantIds.includes(l.authorId) || userIds.includes(l.coordinatorId));
+                return laudos.filter(l => userIds.includes(l.authorId) || teamIds.includes(l.authorId) || userIds.includes(l.coordinatorId));
             }
 
             if (user.role === 'consultor') {
@@ -537,7 +529,7 @@ const AuthManager = (function () {
             }
 
             if (currentUser.role === 'coordenador') {
-                return users.filter(u => userIds.includes(u.id) || (u.role === 'consultor' && userIds.includes(u.coordinatorId)));
+                return users.filter(u => userIds.includes(u.id) || ((u.role === 'consultor' || u.role === 'admin') && userIds.includes(u.coordinatorId)));
             }
 
             if (currentUser.role === 'consultor') {
