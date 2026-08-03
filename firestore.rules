@@ -1,0 +1,93 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function profile() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function active() {
+      return signedIn() && profile().get('active', true) == true;
+    }
+
+    function admin() {
+      return active() && (profile().get('isAdmin', false) == true || profile().role == 'admin');
+    }
+
+    function coordinator() {
+      return active() && profile().role == 'coordenador';
+    }
+
+    match /users/{userId} {
+      allow read: if signedIn() && (
+        request.auth.uid == userId ||
+        admin() ||
+        (coordinator() && resource.data.coordinatorId == request.auth.uid)
+      );
+
+      allow create: if admin() || (
+        signedIn() && request.auth.uid == userId &&
+        request.resource.data.role == 'consultor' &&
+        request.resource.data.get('isAdmin', false) == false
+      );
+
+      allow update: if admin() || (
+        active() && request.auth.uid == userId &&
+        request.resource.data.role == resource.data.role &&
+        request.resource.data.get('isAdmin', false) == resource.data.get('isAdmin', false) &&
+        request.resource.data.get('coordinatorId', null) == resource.data.get('coordinatorId', null) &&
+        request.resource.data.get('active', true) == resource.data.get('active', true)
+      );
+
+      allow delete: if false;
+    }
+
+    match /laudos/{laudoId} {
+      allow read: if admin() ||
+        (active() && resource.data.authorId == request.auth.uid) ||
+        (coordinator() && resource.data.coordinatorId == request.auth.uid);
+
+      allow create: if active() &&
+        request.resource.data.authorId == request.auth.uid &&
+        ((profile().role == 'coordenador' && request.resource.data.coordinatorId == request.auth.uid) ||
+         (profile().role == 'consultor' &&
+          request.resource.data.get('coordinatorId', null) == profile().get('coordinatorId', null))) &&
+        !('deletedAt' in request.resource.data);
+
+      allow update: if admin() ||
+        (active() && resource.data.authorId == request.auth.uid &&
+          !('deletedAt' in resource.data) &&
+          request.resource.data.authorId == resource.data.authorId &&
+          request.resource.data.coordinatorId == resource.data.coordinatorId &&
+          request.resource.data.createdAt == resource.data.createdAt) ||
+        (coordinator() && resource.data.coordinatorId == request.auth.uid &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            'deletedAt', 'deletedBy', 'deletedByName', 'updatedAt', 'updatedBy'
+          ]) && request.resource.data.deletedAt != null);
+
+      allow delete: if false;
+    }
+
+    match /laudos/{laudoId}/images/{imageId} {
+      allow read: if admin() ||
+        (active() && resource.data.authorId == request.auth.uid) ||
+        (coordinator() &&
+          get(/databases/$(database)/documents/laudos/$(laudoId)).data.coordinatorId == request.auth.uid);
+
+      allow create: if active() && request.resource.data.authorId == request.auth.uid;
+      allow update: if admin() ||
+        (active() && resource.data.authorId == request.auth.uid &&
+          request.resource.data.get('authorId', resource.data.authorId) == resource.data.authorId);
+      allow delete: if admin() || (active() && resource.data.authorId == request.auth.uid);
+    }
+
+    match /clients/{clientId} {
+      allow read: if admin() || (active() && resource.data.userId == request.auth.uid);
+      allow create: if active() && request.resource.data.userId == request.auth.uid;
+      allow update, delete: if admin() || (active() && resource.data.userId == request.auth.uid);
+    }
+  }
+}

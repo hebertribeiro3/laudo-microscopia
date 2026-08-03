@@ -197,6 +197,18 @@
                                     <span>WHITE</span>
                                 </label>
                                 <label class="tile-option">
+                                    <input type="radio" name="meio_cultura" value="RZB">
+                                    <span>RZB</span>
+                                </label>
+                                <label class="tile-option">
+                                    <input type="radio" name="meio_cultura" value="AZ">
+                                    <span>AZ</span>
+                                </label>
+                                <label class="tile-option">
+                                    <input type="radio" name="meio_cultura" value="ISARIA">
+                                    <span>ISARIA</span>
+                                </label>
+                                <label class="tile-option">
                                     <input type="radio" name="meio_cultura" value="Não se aplica">
                                     <span>N/A</span>
                                 </label>
@@ -466,6 +478,9 @@
                                         <span class="checkbox-item" id="chk-meio-catp">☐ CATP</span>
                                         <span class="checkbox-item" id="chk-meio-finish">☐ FINISH</span>
                                         <span class="checkbox-item" id="chk-meio-white">☐ WHITE</span>
+                                        <span class="checkbox-item" id="chk-meio-rzb">☐ RZB</span>
+                                        <span class="checkbox-item" id="chk-meio-az">☐ AZ</span>
+                                        <span class="checkbox-item" id="chk-meio-isaria">☐ ISARIA</span>
                                         <span class="checkbox-item" id="chk-meio-na">☐ Não se aplica</span>
                                     </div>
                                 </td>
@@ -633,7 +648,7 @@
                 <button type="button" id="tab-login-btn" class="login-segmented-btn active">
                     <i class="fa-solid fa-right-to-bracket"></i> Entrar
                 </button>
-                <button type="button" id="tab-register-btn" class="login-segmented-btn">
+                <button type="button" id="tab-register-btn" class="login-segmented-btn" style="display:none;">
                     <i class="fa-solid fa-user-plus"></i> Novo Consultor
                 </button>
             </div>
@@ -770,6 +785,7 @@
                                 <th>Data Emissão</th>
                                 <th>Gerado por</th>
                                 <th>Nível</th>
+                                <th>Status</th>
                                 <th style="text-align: right;">Ações</th>
                             </tr>
                         </thead>
@@ -826,7 +842,7 @@
                             <select id="user-input-role" required>
                                 <option value="consultor">Consultor</option>
                                 <option value="coordenador">Coordenador</option>
-                                <option value="admin">Admin Principal</option>
+                                <option value="admin">Consultor + Admin</option>
                             </select>
                         </div>
                         <div class="form-group col-4" id="group-coord-select">
@@ -1054,7 +1070,7 @@
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
 
     <!-- Scripts da Aplicação -->
-    <script src="auth-store.js?v=3"></script>
-    <script src="app.js?v=10"></script>
+    <script src="auth-store.js?v=4"></script>
+    <script src="app.js?v=11"></script>
 </body>
 </html>

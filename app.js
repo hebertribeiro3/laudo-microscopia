@@ -269,13 +269,17 @@ document.addEventListener('DOMContentLoaded', () => {
         setMediumText('chk-meio-catp', 'CATP', 'CATP');
         setMediumText('chk-meio-finish', 'FINISH', 'FINISH');
         setMediumText('chk-meio-white', 'WHITE', 'WHITE');
+        setMediumText('chk-meio-rzb', 'RZB', 'RZB');
+        setMediumText('chk-meio-az', 'AZ', 'AZ');
+        setMediumText('chk-meio-isaria', 'ISARIA', 'ISARIA');
         setMediumText('chk-meio-na', 'Não se aplica', 'Não se aplica');
 
         const meioIds = {
             'BAC': 'chk-meio-bac', 'SM': 'chk-meio-sm', 
             'SH': 'chk-meio-sh',
             'BUG': 'chk-meio-bug', 'CATP': 'chk-meio-catp', 'FINISH': 'chk-meio-finish', 
-            'WHITE': 'chk-meio-white', 'Não se aplica': 'chk-meio-na'
+            'WHITE': 'chk-meio-white', 'RZB': 'chk-meio-rzb', 'AZ': 'chk-meio-az',
+            'ISARIA': 'chk-meio-isaria', 'Não se aplica': 'chk-meio-na'
         };
         Object.keys(meioIds).forEach(k => {
             const el = document.getElementById(meioIds[k]);
@@ -713,7 +717,8 @@ document.addEventListener('DOMContentLoaded', () => {
     function saveToLocalStorage() {
         try {
             const state = getFormState();
-            localStorage.setItem('laudo_micros_state', JSON.stringify(state));
+            const userId = AuthManager.getCurrentUser()?.id || 'guest';
+            localStorage.setItem(`laudo_micros_state_${userId}`, JSON.stringify(state));
         } catch (e) {
             console.warn("Quota excedida no LocalStorage para imagens.", e);
         }
@@ -724,7 +729,7 @@ document.addEventListener('DOMContentLoaded', () => {
         return checked ? checked.value : "";
     }
 
-    function loadFormState(state) {
+    async function loadFormState(state) {
         if (!state) return;
         
         if (state.relatorio_num) document.getElementById('relatorio_num').value = state.relatorio_num;
@@ -794,8 +799,9 @@ document.addEventListener('DOMContentLoaded', () => {
         if (state.outros_microrganismos) setRadioValue('outros_microrganismos', state.outros_microrganismos);
         
         if (state.image40x) {
+            const resolved40x = await FirebaseSync.getLaudoImage(state.image40x);
             base64Image40x = state.image40x;
-            imgPreview40x.src = state.image40x;
+            imgPreview40x.src = resolved40x;
             imgPreview40x.style.display = 'block';
             placeholder40x.style.display = 'none';
             dropzone40x.querySelector('.file-name').textContent = state.image40xName || "Imagem carregada";
@@ -808,8 +814,9 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         if (state.image100x) {
+            const resolved100x = await FirebaseSync.getLaudoImage(state.image100x);
             base64Image100x = state.image100x;
-            imgPreview100x.src = state.image100x;
+            imgPreview100x.src = resolved100x;
             imgPreview100x.style.display = 'block';
             placeholder100x.style.display = 'none';
             dropzone100x.querySelector('.file-name').textContent = state.image100xName || "Imagem carregada";
@@ -825,7 +832,14 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function loadFromLocalStorage() {
-        const stored = localStorage.getItem('laudo_micros_state');
+        const userId = AuthManager.getCurrentUser()?.id || 'guest';
+        const userKey = `laudo_micros_state_${userId}`;
+        const legacy = localStorage.getItem('laudo_micros_state');
+        const stored = localStorage.getItem(userKey) || legacy;
+        if (legacy && !localStorage.getItem(userKey)) {
+            localStorage.setItem(userKey, legacy);
+            localStorage.removeItem('laudo_micros_state');
+        }
         if (!stored) {
             setDefaultDates();
             setPredefinedDefaults();
@@ -863,6 +877,27 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const state = getFormState();
         const laudoId = currentEditingLaudoId || ('laudo_' + Date.now());
+        const existingLaudos = currentEditingLaudoId ? await LaudoDB.getLaudos() : [];
+        const existing = existingLaudos.find(l => l.id === currentEditingLaudoId) || null;
+
+        if (existing && !AuthManager.canEditLaudo(existing, user)) {
+            showToast('Você pode visualizar este laudo, mas somente o autor pode editá-lo.', 'error');
+            return null;
+        }
+
+        try {
+            if (state.image40x && state.image40x.startsWith('data:image/')) {
+                state.image40x = await FirebaseSync.uploadLaudoImage(laudoId, user.id, '40x', state.image40x);
+                base64Image40x = state.image40x;
+            }
+            if (state.image100x && state.image100x.startsWith('data:image/')) {
+                state.image100x = await FirebaseSync.uploadLaudoImage(laudoId, user.id, '100x', state.image100x);
+                base64Image100x = state.image100x;
+            }
+        } catch (error) {
+            showToast('Não foi possível enviar as fotos: ' + (error.message || 'erro desconhecido'), 'error');
+            return null;
+        }
 
         let coordName = null;
         if (user.role === 'consultor' && user.coordinatorId) {
@@ -881,21 +916,29 @@ document.addEventListener('DOMContentLoaded', () => {
             microrganismo: state.microrganismo,
             data_emissao: state.data_emissao,
             data_analise: state.data_analise,
-            authorId: user.id,
-            authorName: user.name,
-            authorRole: user.role,
-            coordinatorId: user.coordinatorId || (user.role === 'coordenador' ? user.id : null),
-            coordinatorName: coordName || (user.role === 'coordenador' ? user.name : null),
-            createdAt: new Date().toISOString(),
+            authorId: existing?.authorId || user.id,
+            authorName: existing?.authorName || user.name,
+            authorRole: existing?.authorRole || user.role,
+            coordinatorId: existing?.coordinatorId || user.coordinatorId || (user.role === 'coordenador' ? user.id : null),
+            coordinatorName: existing?.coordinatorName || coordName || (user.role === 'coordenador' ? user.name : null),
+            createdAt: existing?.createdAt || new Date().toISOString(),
+            createdBy: existing?.createdBy || user.id,
+            updatedAt: new Date().toISOString(),
+            updatedBy: user.id,
             formData: state
         };
 
-        await LaudoDB.saveLaudo(laudoRecord);
+        try {
+            await LaudoDB.saveLaudo(laudoRecord);
+        } catch (error) {
+            showToast('O laudo ficou salvo neste aparelho, mas não sincronizou: ' + (error.message || 'verifique sua conexão'), 'error');
+            return null;
+        }
         currentEditingLaudoId = laudoId;
         saveToLocalStorage();
 
         if (showNotification) {
-            showToast(`Laudo Nº ${laudoRecord.relatorio_num} salvo no sistema com sucesso!`, 'success');
+            showToast(`Laudo Nº ${laudoRecord.relatorio_num} sincronizado com sucesso!`, 'success');
         }
         return laudoRecord;
     }
@@ -1022,6 +1065,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const res = await AuthManager.login(email, pass);
             if (res.success) {
                 failedLoginAttempts = 0;
+                const migration = await FirebaseSync.syncPendingForUser(res.user);
                 closeModal('modal-login');
                 renderUserSessionBar();
                 setPredefinedDefaults();
@@ -1032,7 +1076,8 @@ document.addEventListener('DOMContentLoaded', () => {
                         openModal('modal-change-password');
                     }, 400);
                 } else {
-                    showToast(`Bem-vindo, ${res.user.name}!`, 'success');
+                    const migrationText = migration.synced > 0 ? ` ${migration.synced} laudo(s) local(is) foram sincronizados.` : '';
+                    showToast(`Bem-vindo, ${res.user.name}!${migrationText}`, 'success');
                     checkFirstLoginClients();
                 }
             } else {
@@ -1162,9 +1207,9 @@ document.addEventListener('DOMContentLoaded', () => {
         let roleLabel = 'Consultor';
         let roleIcon = 'fa-microscope';
 
-        if (user.role === 'admin') {
+        if (AuthManager.isAdmin(user)) {
             roleBadgeClass = 'badge-role-admin';
-            roleLabel = 'Admin Principal';
+            roleLabel = user.role === 'consultor' ? 'Consultor • Admin' : 'Admin Principal';
             roleIcon = 'fa-crown';
         } else if (user.role === 'coordenador') {
             roleBadgeClass = 'badge-role-coordenador';
@@ -1183,7 +1228,7 @@ document.addEventListener('DOMContentLoaded', () => {
             </button>
         `;
 
-        if (user.role === 'admin') {
+        if (AuthManager.isAdmin(user)) {
             actionButtonsHTML += `
                 <button type="button" class="user-action-btn" id="btn-open-users-bar" title="Gerenciar Usuários">
                     <i class="fa-solid fa-users-gear"></i> Usuários
@@ -1278,7 +1323,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         // Se for ADMINISTRADOR, exibir também os clientes padrão do arquivo Dados.xlsx
-        if (user.role === 'admin') {
+        if (AuthManager.isAdmin(user)) {
             html += '<optgroup label="📋 Clientes Padrão (Dados)">';
             DADOS_PREDEFINED_CLIENTS.forEach(clientName => {
                 if (!myClients.some(c => c.name === clientName)) {
@@ -1288,7 +1333,7 @@ document.addEventListener('DOMContentLoaded', () => {
             html += '</optgroup>';
         }
 
-        if (myClients.length === 0 && user.role !== 'admin') {
+        if (myClients.length === 0 && !AuthManager.isAdmin(user)) {
             html += '<option value="" disabled>Nenhum cliente cadastrado ainda. Adicione o 1º cliente!</option>';
         }
 
@@ -1304,7 +1349,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!user) return;
 
         // Admins já possuem os clientes do arquivo Dados.xlsx disponíveis
-        if (user.role === 'admin') return;
+        if (AuthManager.isAdmin(user)) return;
 
         const allClients = await LaudoDB.getClients();
         const myClients = allClients.filter(c => c.userId === user.id);
@@ -1369,10 +1414,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
     window.deleteClientFromTable = async function(id) {
         if (confirm("Tem certeza que deseja excluir este cliente/fazenda?")) {
-            await LaudoDB.deleteClient(id);
-            showToast("Cliente removido com sucesso.", 'info');
-            await populateClientDropdown();
-            renderClientsManagement();
+            try {
+                await LaudoDB.deleteClient(id);
+                showToast("Cliente removido com sucesso.", 'info');
+                await populateClientDropdown();
+                renderClientsManagement();
+            } catch (error) {
+                showToast('Não foi possível excluir o cliente: ' + (error.message || ''), 'error');
+            }
         }
     };
 
@@ -1404,7 +1453,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 name: name
             };
 
-            await LaudoDB.saveClient(clientRecord);
+            try {
+                await LaudoDB.saveClient(clientRecord);
+            } catch (error) {
+                showToast('O cliente não foi sincronizado: ' + (error.message || ''), 'error');
+                return;
+            }
             document.getElementById('form-client-edit').classList.add('hidden');
             showToast(`Cliente "${name}" salvo com sucesso!`, 'success');
             await populateClientDropdown();
@@ -1461,8 +1515,13 @@ document.addEventListener('DOMContentLoaded', () => {
                         userId: user.id,
                         name: name
                     };
-                    await LaudoDB.saveClient(clientRecord);
-                    savedNames.push(name);
+                    try {
+                        await LaudoDB.saveClient(clientRecord);
+                        savedNames.push(name);
+                    } catch (error) {
+                        showToast(`Não foi possível sincronizar "${name}": ${error.message || ''}`, 'error');
+                        return;
+                    }
                 }
             }
 
@@ -1535,7 +1594,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (filtered.length === 0) {
                 tbody.innerHTML = `
                     <tr>
-                        <td colspan="8" style="text-align: center; color: var(--text-muted); padding: 24px;">
+                        <td colspan="9" style="text-align: center; color: var(--text-muted); padding: 24px;">
                             <i class="fa-solid fa-folder-open" style="font-size: 24px; margin-bottom: 8px;"></i><br>
                             Nenhum laudo encontrado no sistema para a sua permissão/filtro.
                         </td>
@@ -1548,7 +1607,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 let roleClass = 'badge-role-consultor';
                 let roleLabel = 'Consultor';
                 if (l.authorRole === 'admin') {
-                    if (currentUser && currentUser.role === 'admin') {
+                    if (AuthManager.isAdmin(currentUser)) {
                         roleClass = 'badge-role-admin';
                         roleLabel = 'Admin';
                     } else {
@@ -1561,9 +1620,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
 
                 const formattedDate = l.data_emissao ? formatDate(l.data_emissao) : '-';
-                const isUserActive = allUsers.some(u => u.id === l.authorId);
+                const isUserActive = allUsers.some(u => u.id === l.authorId && u.active !== false);
                 const authorNameSafe = escapeHTML(l.authorName || '-');
                 const authorDisplay = isUserActive ? authorNameSafe : `${authorNameSafe} <span style="font-size:10px; color:#64748b;">(Ex-Usuário)</span>`;
+                const isDeleted = !!l.deletedAt;
+                const canEdit = AuthManager.canEditLaudo(l, currentUser);
+                const canDelete = AuthManager.canDeleteLaudo(l, currentUser) && !isDeleted;
+                const statusLabel = isDeleted
+                    ? `<span class="user-role-badge" style="background:#fee2e2;color:#991b1b;">Excluído</span>`
+                    : (l.syncStatus === 'pending'
+                        ? `<span class="user-role-badge" style="background:#fef3c7;color:#92400e;">Pendente</span>`
+                        : `<span class="user-role-badge" style="background:#dcfce7;color:#166534;">Sincronizado</span>`);
 
                 return `
                     <tr>
@@ -1574,17 +1641,21 @@ document.addEventListener('DOMContentLoaded', () => {
                         <td>${escapeHTML(formattedDate)}</td>
                         <td>${authorDisplay}</td>
                         <td><span class="user-role-badge ${roleClass}" style="font-size: 8px;">${roleLabel}</span></td>
+                        <td>${statusLabel}</td>
                         <td style="text-align: right;">
                             <div class="table-actions" style="justify-content: flex-end;">
-                                <button type="button" class="btn-sm-action btn-view" onclick="loadLaudoFromRepository('${escapeHTML(l.id)}')" title="Editar / Carregar">
+                                ${canEdit ? `<button type="button" class="btn-sm-action btn-view" onclick="loadLaudoFromRepository('${escapeHTML(l.id)}')" title="Editar / Carregar">
                                     <i class="fa-solid fa-pen-to-square"></i> Editar
-                                </button>
+                                </button>` : ''}
                                 <button type="button" class="btn-sm-action btn-print-sm" onclick="printLaudoFromRepository('${escapeHTML(l.id)}')" title="Imprimir PDF">
                                     <i class="fa-solid fa-print"></i> PDF
                                 </button>
-                                <button type="button" class="btn-sm-action btn-del" onclick="deleteLaudoFromRepository('${escapeHTML(l.id)}')" title="Excluir">
+                                ${canDelete ? `<button type="button" class="btn-sm-action btn-del" onclick="deleteLaudoFromRepository('${escapeHTML(l.id)}')" title="Excluir">
                                     <i class="fa-solid fa-trash"></i>
-                                </button>
+                                </button>` : ''}
+                                ${isDeleted && AuthManager.isAdmin(currentUser) ? `<button type="button" class="btn-sm-action btn-view" onclick="restoreLaudoFromRepository('${escapeHTML(l.id)}')" title="Restaurar">
+                                    <i class="fa-solid fa-rotate-left"></i> Restaurar
+                                </button>` : ''}
                             </div>
                         </td>
                     </tr>
@@ -1602,9 +1673,13 @@ document.addEventListener('DOMContentLoaded', () => {
     window.loadLaudoFromRepository = async function(id) {
         const laudos = await LaudoDB.getLaudos();
         const found = laudos.find(l => l.id === id);
+        if (!AuthManager.canEditLaudo(found, AuthManager.getCurrentUser())) {
+            showToast('Somente o autor pode editar este laudo.', 'error');
+            return;
+        }
         if (found && found.formData) {
             currentEditingLaudoId = found.id;
-            loadFormState(found.formData);
+            await loadFormState(found.formData);
             closeModal('modal-laudos');
             showToast(`Laudo Nº ${found.relatorio_num} carregado no editor!`, 'success');
         }
@@ -1612,23 +1687,36 @@ document.addEventListener('DOMContentLoaded', () => {
 
     window.printLaudoFromRepository = async function(id) {
         const laudos = await LaudoDB.getLaudos();
-        const found = laudos.find(l => l.id === id);
+        const accessible = await AuthManager.filterAccessibleLaudos(laudos, AuthManager.getCurrentUser());
+        const found = accessible.find(l => l.id === id);
         if (found && found.formData) {
             currentEditingLaudoId = found.id;
-            loadFormState(found.formData);
+            await loadFormState(found.formData);
             closeModal('modal-laudos');
             setTimeout(() => window.print(), 300);
         }
     };
 
     window.deleteLaudoFromRepository = async function(id) {
-        if (confirm("Tem certeza que deseja excluir este laudo permanentemente?")) {
-            await LaudoDB.deleteLaudo(id);
-            if (currentEditingLaudoId === id) {
-                currentEditingLaudoId = null;
+        if (confirm("Tem certeza que deseja mover este laudo para a lixeira?")) {
+            try {
+                await LaudoDB.deleteLaudo(id, AuthManager.getCurrentUser());
+                if (currentEditingLaudoId === id) currentEditingLaudoId = null;
+                showToast("Laudo movido para a lixeira.", 'info');
+                renderLaudosRepository();
+            } catch (error) {
+                showToast(error.message || 'Não foi possível excluir o laudo.', 'error');
             }
-            showToast("Laudo removido com sucesso.", 'info');
+        }
+    };
+
+    window.restoreLaudoFromRepository = async function(id) {
+        try {
+            await LaudoDB.restoreLaudo(id, AuthManager.getCurrentUser());
+            showToast('Laudo restaurado com sucesso.', 'success');
             renderLaudosRepository();
+        } catch (error) {
+            showToast(error.message || 'Não foi possível restaurar o laudo.', 'error');
         }
     };
 
@@ -1649,12 +1737,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 coords.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
         }
 
-        tbody.innerHTML = users.map(u => {
+        tbody.innerHTML = users.filter(u => u.active !== false).map(u => {
             let roleClass = 'badge-role-consultor';
             let roleLabel = 'Consultor';
-            if (u.role === 'admin') {
+            if (AuthManager.isAdmin(u)) {
                 roleClass = 'badge-role-admin';
-                roleLabel = 'Admin Principal';
+                roleLabel = u.role === 'consultor' ? 'Consultor + Admin' : 'Admin Principal';
             } else if (u.role === 'coordenador') {
                 roleClass = 'badge-role-coordenador';
                 roleLabel = 'Coordenador';
@@ -1677,7 +1765,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             <button type="button" class="btn-sm-action btn-view" onclick="editUserFromTable('${escapeHTML(u.id)}')" title="Editar">
                                 <i class="fa-solid fa-pen"></i> Editar
                             </button>
-                            ${u.role !== 'admin' ? `
+                            ${!AuthManager.isAdmin(u) ? `
                                 <button type="button" class="btn-sm-action btn-del" onclick="deleteUserFromTable('${escapeHTML(u.id)}')" title="Excluir">
                                     <i class="fa-solid fa-trash"></i> Excluir
                                 </button>
@@ -1702,7 +1790,7 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('user-input-pass').value = '';
         document.getElementById('user-input-pass').placeholder = 'Deixe em branco para manter';
         document.getElementById('user-input-pass').required = false;
-        document.getElementById('user-input-role').value = found.role;
+        document.getElementById('user-input-role').value = AuthManager.isAdmin(found) ? 'admin' : found.role;
         document.getElementById('user-input-coord').value = found.coordinatorId || '';
 
         toggleGroupCoordSelect();
@@ -1710,10 +1798,14 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     window.deleteUserFromTable = async function(id) {
-        if (confirm("Tem certeza que deseja excluir este usuário?")) {
-            await LaudoDB.deleteUser(id);
-            showToast("Usuário removido com sucesso.", 'info');
-            renderUsersManagement();
+        if (confirm("Tem certeza que deseja desativar este usuário? O histórico de laudos será preservado.")) {
+            try {
+                await LaudoDB.deleteUser(id);
+                showToast("Usuário desativado com sucesso.", 'info');
+                renderUsersManagement();
+            } catch (error) {
+                showToast('Não foi possível desativar o usuário: ' + (error.message || ''), 'error');
+            }
         }
     };
 
@@ -1766,7 +1858,9 @@ document.addEventListener('DOMContentLoaded', () => {
             const name = document.getElementById('user-input-name').value;
             const email = document.getElementById('user-input-email').value;
             const pass = document.getElementById('user-input-pass').value;
-            const role = document.getElementById('user-input-role').value;
+            const selectedRole = document.getElementById('user-input-role').value;
+            const role = selectedRole === 'admin' ? 'consultor' : selectedRole;
+            const isAdmin = selectedRole === 'admin';
             const coordId = document.getElementById('user-input-coord').value || null;
 
             if (editId) {
@@ -1774,7 +1868,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     name,
                     email,
                     role,
-                    coordinatorId: (role === 'consultor' || role === 'admin') ? coordId : null
+                    isAdmin,
+                    coordinatorId: role === 'consultor' ? coordId : null
                 };
                 const dbFirebase = window.dbFirebase;
                 if (dbFirebase) {
@@ -1790,24 +1885,17 @@ document.addEventListener('DOMContentLoaded', () => {
                     showToast('Defina uma senha de no mínimo 3 caracteres para o novo usuário.', 'error');
                     return;
                 }
-                if (typeof firebase !== 'undefined' && firebase.auth && window.dbFirebase) {
-                    try {
-                        const cred = await firebase.auth().createUserWithEmailAndPassword(email, pass);
-                        const uid = cred.user.uid;
-                        const newUser = {
-                            id: uid,
-                            name,
-                            email,
-                            role,
-                            coordinatorId: (role === 'consultor' || role === 'admin') ? coordId : null
-                        };
-                        await window.dbFirebase.collection('users').doc(uid).set(newUser);
-                    } catch (err) {
-                        showToast('Erro ao criar usuário: ' + (err.message || ''), 'error');
-                        return;
-                    }
-                } else {
-                    showToast('Firebase não disponível para criar usuário.', 'error');
+                const result = await AuthManager.createManagedUser({
+                    name,
+                    email,
+                    role,
+                    isAdmin,
+                    coordinatorId: role === 'consultor' ? coordId : null,
+                    mustChangePassword: true,
+                    active: true
+                }, pass);
+                if (!result.success) {
+                    showToast('Erro ao criar usuário: ' + result.message, 'error');
                     return;
                 }
             }
@@ -1833,13 +1921,13 @@ document.addEventListener('DOMContentLoaded', () => {
         if (currentUser.previousId) userIds.push(currentUser.previousId);
 
         const allUsers = await LaudoDB.getUsers();
-        let team = allUsers.filter(u => (u.role === 'consultor' || u.role === 'admin') && userIds.includes(u.coordinatorId));
+        let team = allUsers.filter(u => u.role === 'consultor' && userIds.includes(u.coordinatorId));
         const laudos = await LaudoDB.getLaudos();
 
         if (team.length === 0 && db) {
             const validIds = allUsers.map(u => u.id);
             const orphans = allUsers.filter(u =>
-                (u.role === 'consultor' || u.role === 'admin') &&
+                u.role === 'consultor' &&
                 u.coordinatorId &&
                 !validIds.includes(u.coordinatorId)
             );
@@ -1930,6 +2018,18 @@ document.addEventListener('DOMContentLoaded', () => {
             setTimeout(() => toast.remove(), 300);
         }, 3500);
     }
+
+    window.addEventListener('auth-state-changed', async event => {
+        await renderUserSessionBar();
+        currentEditingLaudoId = null;
+        loadFromLocalStorage();
+        if (event.detail?.user) await FirebaseSync.syncPendingForUser(event.detail.user);
+    });
+
+    window.addEventListener('firebase-data-synced', () => {
+        if (document.getElementById('modal-laudos')?.classList.contains('active')) renderLaudosRepository();
+        if (document.getElementById('modal-equipe')?.classList.contains('active')) renderTeamView();
+    });
 
     // Initialize Application Auth & Session State
     loadFromLocalStorage();
