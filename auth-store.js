@@ -206,13 +206,6 @@ const firebaseConfig = {
   measurementId: "G-BCY108CPE2"
 };
 
-// Coordenadora principal da equipe. Também permite recuperar corretamente contas
-// antigas que existem no Authentication, mas ficaram sem perfil no Firestore.
-const DEFAULT_COORDINATOR = {
-    id: 'eumP5P0pbLQELkX8joa666S4ZaI3',
-    name: 'Bruna Carneiro Silva'
-};
-
 let dbFirebase = null;
 try {
     if (typeof firebase !== 'undefined' && firebase.initializeApp) {
@@ -416,69 +409,14 @@ const AuthManager = (function () {
         return normalized;
     }
 
-    function buildRecoveredProfile(firebaseUser) {
-        const email = (firebaseUser.email || '').trim().toLowerCase();
-        return {
-            id: firebaseUser.uid,
-            firebaseUid: firebaseUser.uid,
-            email,
-            name: email.split('@')[0].replace(/[._-]+/g, ' ').toUpperCase(),
-            role: 'consultor',
-            coordinatorId: DEFAULT_COORDINATOR.id,
-            coordinatorName: DEFAULT_COORDINATOR.name,
-            mustChangePassword: false,
-            active: true,
-            recoveredAt: new Date().toISOString()
-        };
-    }
-
-    async function loadOrRecoverProfile(firebaseUser) {
+    async function loadProfile(firebaseUser) {
         const userDoc = await dbFirebase.collection('users').doc(firebaseUser.uid).get();
-        if (userDoc.exists) return { ...userDoc.data(), id: userDoc.id };
-
-        const cleanEmail = (firebaseUser.email || '').trim().toLowerCase();
-        let emailSnapshot = null;
-        try {
-            emailSnapshot = await dbFirebase.collection('users').where('email', '==', cleanEmail).get();
-        } catch (error) {
-            // Um usuário sem perfil só tem permissão para criar o próprio documento.
-            // Nesse caso, seguimos para a recuperação abaixo.
-            console.info('[AuthManager] Perfil legado não pôde ser consultado; recuperando pelo UID atual.');
+        if (!userDoc.exists) {
+            const error = new Error('Este usuário foi excluído ou não possui perfil ativo. Procure o administrador.');
+            error.code = 'profile/not-found';
+            throw error;
         }
-        if (emailSnapshot && !emailSnapshot.empty) {
-            const oldDoc = emailSnapshot.docs[0];
-            const oldId = oldDoc.id;
-            const { password, ...safeData } = oldDoc.data();
-            const migrated = {
-                ...safeData,
-                id: firebaseUser.uid,
-                firebaseUid: firebaseUser.uid,
-                previousId: oldId,
-                coordinatorId: safeData.coordinatorId || DEFAULT_COORDINATOR.id,
-                coordinatorName: safeData.coordinatorName || DEFAULT_COORDINATOR.name
-            };
-            await dbFirebase.collection('users').doc(firebaseUser.uid).set(migrated);
-
-            const refs = [
-                { collection: 'users', field: 'coordinatorId' },
-                { collection: 'laudos', field: 'authorId' },
-                { collection: 'laudos', field: 'coordinatorId' },
-                { collection: 'clients', field: 'userId' }
-            ];
-            for (const ref of refs) {
-                try {
-                    const snap = await dbFirebase.collection(ref.collection).where(ref.field, '==', oldId).get();
-                    for (const doc of snap.docs) await doc.ref.update({ [ref.field]: firebaseUser.uid });
-                } catch (error) {
-                    console.warn('[AuthManager] Erro ao atualizar referência antiga:', error);
-                }
-            }
-            return migrated;
-        }
-
-        const recovered = buildRecoveredProfile(firebaseUser);
-        await dbFirebase.collection('users').doc(firebaseUser.uid).set(recovered);
-        return recovered;
+        return { ...userDoc.data(), id: userDoc.id };
     }
 
     function init() {
@@ -496,7 +434,7 @@ const AuthManager = (function () {
 
     return {
         getCurrentUser: () => currentUser,
-        loadOrRecoverProfile,
+        loadProfile,
         isAdmin: (user = currentUser) => !!user && (user.isAdmin === true || user.role === 'admin'),
         canDeleteLaudo: (laudo, user = currentUser) => {
             if (!laudo || !user) return false;
@@ -530,7 +468,7 @@ const AuthManager = (function () {
                 const cred = await firebase.auth().signInWithEmailAndPassword(cleanEmail, password);
                 const uid = cred.user.uid;
 
-                let userData = await loadOrRecoverProfile(cred.user);
+                let userData = await loadProfile(cred.user);
 
                 // Tentar vincular coordenadores de forma segura (sem travar o login em caso de falha de permissão)
                 try {
@@ -561,6 +499,9 @@ const AuthManager = (function () {
                 FirebaseSync.startForUser(userData);
                 return { success: true, user: userData };
             } catch (err) {
+                if (err.code === 'profile/not-found') {
+                    try { await firebase.auth().signOut(); } catch (e) {}
+                }
                 const msg = err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password' || err.code === 'auth/invalid-credential'
                     ? 'E-mail ou senha incorretos.'
                     : err.message || 'Erro ao fazer login.';
@@ -607,9 +548,10 @@ const AuthManager = (function () {
                 return { success: false, message: 'Somente o administrador pode criar usuários.' };
             }
             let secondaryApp;
+            let credential;
             try {
                 secondaryApp = firebase.apps.find(app => app.name === 'user-creator') || firebase.initializeApp(firebaseConfig, 'user-creator');
-                const credential = await secondaryApp.auth().createUserWithEmailAndPassword(profile.email.trim().toLowerCase(), password);
+                credential = await secondaryApp.auth().createUserWithEmailAndPassword(profile.email.trim().toLowerCase(), password);
                 const newUser = {
                     ...profile,
                     id: credential.user.uid,
@@ -622,6 +564,9 @@ const AuthManager = (function () {
                 await LaudoDB.putLocal('users', newUser);
                 return { success: true, user: newUser };
             } catch (error) {
+                // Evita deixar uma conta órfã no Authentication quando a criação
+                // do perfil no Firestore falha depois do cadastro da credencial.
+                try { await credential?.user?.delete(); } catch (e) {}
                 try { await secondaryApp?.auth().signOut(); } catch (e) {}
                 return { success: false, message: error.message || 'Erro ao criar usuário.' };
             }
@@ -756,7 +701,7 @@ if (typeof firebase !== 'undefined' && firebase.auth) {
             return;
         }
         try {
-            let profile = await AuthManager.loadOrRecoverProfile(firebaseUser);
+            let profile = await AuthManager.loadProfile(firebaseUser);
             if (profile.role === 'admin') {
                 profile = { ...profile, role: 'consultor', isAdmin: true };
                 await dbFirebase.collection('users').doc(firebaseUser.uid).set({ role: 'consultor', isAdmin: true }, { merge: true });
@@ -766,6 +711,9 @@ if (typeof firebase !== 'undefined' && firebase.auth) {
             window.dispatchEvent(new CustomEvent('auth-state-changed', { detail: { user: AuthManager.getCurrentUser() } }));
         } catch (error) {
             console.warn('[AuthManager] Não foi possível restaurar o perfil:', error);
+            try { await firebase.auth().signOut(); } catch (e) {}
+            AuthManager.setCurrentUser(null);
+            window.dispatchEvent(new CustomEvent('auth-state-changed', { detail: { user: null } }));
         }
     });
 }
