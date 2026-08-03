@@ -206,6 +206,13 @@ const firebaseConfig = {
   measurementId: "G-BCY108CPE2"
 };
 
+// Coordenadora principal da equipe. Também permite recuperar corretamente contas
+// antigas que existem no Authentication, mas ficaram sem perfil no Firestore.
+const DEFAULT_COORDINATOR = {
+    id: 'eumP5P0pbLQELkX8joa666S4ZaI3',
+    name: 'Bruna Carneiro Silva'
+};
+
 let dbFirebase = null;
 try {
     if (typeof firebase !== 'undefined' && firebase.initializeApp) {
@@ -409,6 +416,71 @@ const AuthManager = (function () {
         return normalized;
     }
 
+    function buildRecoveredProfile(firebaseUser) {
+        const email = (firebaseUser.email || '').trim().toLowerCase();
+        return {
+            id: firebaseUser.uid,
+            firebaseUid: firebaseUser.uid,
+            email,
+            name: email.split('@')[0].replace(/[._-]+/g, ' ').toUpperCase(),
+            role: 'consultor',
+            coordinatorId: DEFAULT_COORDINATOR.id,
+            coordinatorName: DEFAULT_COORDINATOR.name,
+            mustChangePassword: false,
+            active: true,
+            recoveredAt: new Date().toISOString()
+        };
+    }
+
+    async function loadOrRecoverProfile(firebaseUser) {
+        const userDoc = await dbFirebase.collection('users').doc(firebaseUser.uid).get();
+        if (userDoc.exists) return { ...userDoc.data(), id: userDoc.id };
+
+        const cleanEmail = (firebaseUser.email || '').trim().toLowerCase();
+        let emailSnapshot = null;
+        try {
+            emailSnapshot = await dbFirebase.collection('users').where('email', '==', cleanEmail).get();
+        } catch (error) {
+            // Um usuário sem perfil só tem permissão para criar o próprio documento.
+            // Nesse caso, seguimos para a recuperação abaixo.
+            console.info('[AuthManager] Perfil legado não pôde ser consultado; recuperando pelo UID atual.');
+        }
+        if (emailSnapshot && !emailSnapshot.empty) {
+            const oldDoc = emailSnapshot.docs[0];
+            const oldId = oldDoc.id;
+            const { password, ...safeData } = oldDoc.data();
+            const migrated = {
+                ...safeData,
+                id: firebaseUser.uid,
+                firebaseUid: firebaseUser.uid,
+                previousId: oldId,
+                coordinatorId: safeData.coordinatorId || DEFAULT_COORDINATOR.id,
+                coordinatorName: safeData.coordinatorName || DEFAULT_COORDINATOR.name
+            };
+            await dbFirebase.collection('users').doc(firebaseUser.uid).set(migrated);
+
+            const refs = [
+                { collection: 'users', field: 'coordinatorId' },
+                { collection: 'laudos', field: 'authorId' },
+                { collection: 'laudos', field: 'coordinatorId' },
+                { collection: 'clients', field: 'userId' }
+            ];
+            for (const ref of refs) {
+                try {
+                    const snap = await dbFirebase.collection(ref.collection).where(ref.field, '==', oldId).get();
+                    for (const doc of snap.docs) await doc.ref.update({ [ref.field]: firebaseUser.uid });
+                } catch (error) {
+                    console.warn('[AuthManager] Erro ao atualizar referência antiga:', error);
+                }
+            }
+            return migrated;
+        }
+
+        const recovered = buildRecoveredProfile(firebaseUser);
+        await dbFirebase.collection('users').doc(firebaseUser.uid).set(recovered);
+        return recovered;
+    }
+
     function init() {
         const stored = localStorage.getItem(CURRENT_USER_KEY);
         if (stored) {
@@ -424,6 +496,7 @@ const AuthManager = (function () {
 
     return {
         getCurrentUser: () => currentUser,
+        loadOrRecoverProfile,
         isAdmin: (user = currentUser) => !!user && (user.isAdmin === true || user.role === 'admin'),
         canDeleteLaudo: (laudo, user = currentUser) => {
             if (!laudo || !user) return false;
@@ -457,51 +530,7 @@ const AuthManager = (function () {
                 const cred = await firebase.auth().signInWithEmailAndPassword(cleanEmail, password);
                 const uid = cred.user.uid;
 
-                const userDoc = await dbFirebase.collection('users').doc(uid).get();
-                let userData;
-
-                if (userDoc.exists) {
-                    userData = userDoc.data();
-                    userData.id = userDoc.id;
-                } else {
-                    const emailSnapshot = await dbFirebase.collection('users').where('email', '==', cleanEmail).get();
-                    if (!emailSnapshot.empty) {
-                        userData = emailSnapshot.docs[0].data();
-                        const oldId = emailSnapshot.docs[0].id;
-                        const { password, ...safeData } = userData;
-                        await dbFirebase.collection('users').doc(uid).set({ ...safeData, id: uid, firebaseUid: uid, previousId: oldId });
-                        await dbFirebase.collection('users').doc(oldId).delete();
-                        const refs = [
-                            { collection: 'users', field: 'coordinatorId', oldVal: oldId, newVal: uid },
-                            { collection: 'laudos', field: 'authorId', oldVal: oldId, newVal: uid },
-                            { collection: 'laudos', field: 'coordinatorId', oldVal: oldId, newVal: uid },
-                            { collection: 'clients', field: 'userId', oldVal: oldId, newVal: uid },
-                        ];
-                        for (const ref of refs) {
-                            try {
-                                const snap = await dbFirebase.collection(ref.collection).where(ref.field, '==', ref.oldVal).get();
-                                for (const d of snap.docs) {
-                                    await d.ref.update({ [ref.field]: ref.newVal });
-                                }
-                            } catch (errRef) {
-                                console.warn('[AuthManager] Erro ao atualizar referências antigas:', errRef);
-                            }
-                        }
-                        userData.id = uid;
-                    } else {
-                        // Perfil fallback caso usuário exista no Auth mas ainda não no Firestore
-                        userData = {
-                            id: uid,
-                            email: cleanEmail,
-                            name: cleanEmail.split('@')[0].toUpperCase(),
-                            role: 'consultor',
-                            coordinatorId: null,
-                            mustChangePassword: false,
-                            active: true
-                        };
-                        await dbFirebase.collection('users').doc(uid).set(userData);
-                    }
-                }
+                let userData = await loadOrRecoverProfile(cred.user);
 
                 // Tentar vincular coordenadores de forma segura (sem travar o login em caso de falha de permissão)
                 try {
@@ -727,9 +756,7 @@ if (typeof firebase !== 'undefined' && firebase.auth) {
             return;
         }
         try {
-            const snapshot = await dbFirebase.collection('users').doc(firebaseUser.uid).get();
-            if (!snapshot.exists) return;
-            let profile = { ...snapshot.data(), id: snapshot.id };
+            let profile = await AuthManager.loadOrRecoverProfile(firebaseUser);
             if (profile.role === 'admin') {
                 profile = { ...profile, role: 'consultor', isAdmin: true };
                 await dbFirebase.collection('users').doc(firebaseUser.uid).set({ role: 'consultor', isAdmin: true }, { merge: true });
