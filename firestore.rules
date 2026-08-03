@@ -68,7 +68,7 @@ service cloud.firestore {
             'deletedAt', 'deletedBy', 'deletedByName', 'updatedAt', 'updatedBy'
           ]) && request.resource.data.deletedAt != null);
 
-      allow delete: if false;
+      allow delete: if admin() && resource.data.deletedAt != null;
     }
 
     match /laudos/{laudoId}/images/{imageId} {

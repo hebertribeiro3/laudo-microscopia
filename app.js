@@ -1656,6 +1656,9 @@ document.addEventListener('DOMContentLoaded', () => {
                                 ${isDeleted && AuthManager.isAdmin(currentUser) ? `<button type="button" class="btn-sm-action btn-view" onclick="restoreLaudoFromRepository('${escapeHTML(l.id)}')" title="Restaurar">
                                     <i class="fa-solid fa-rotate-left"></i> Restaurar
                                 </button>` : ''}
+                                ${isDeleted && AuthManager.isAdmin(currentUser) ? `<button type="button" class="btn-sm-action btn-del" onclick="permanentlyDeleteLaudoFromRepository('${escapeHTML(l.id)}')" title="Excluir definitivamente">
+                                    <i class="fa-solid fa-trash-can"></i> Definitivo
+                                </button>` : ''}
                             </div>
                         </td>
                     </tr>
@@ -1717,6 +1720,19 @@ document.addEventListener('DOMContentLoaded', () => {
             renderLaudosRepository();
         } catch (error) {
             showToast(error.message || 'Não foi possível restaurar o laudo.', 'error');
+        }
+    };
+
+    window.permanentlyDeleteLaudoFromRepository = async function(id) {
+        const confirmed = confirm('ATENÇÃO: este laudo e todas as fotos serão apagados permanentemente. Essa ação não pode ser desfeita. Deseja continuar?');
+        if (!confirmed) return;
+        try {
+            await LaudoDB.permanentlyDeleteLaudo(id, AuthManager.getCurrentUser());
+            if (currentEditingLaudoId === id) currentEditingLaudoId = null;
+            showToast('Laudo excluído permanentemente.', 'success');
+            renderLaudosRepository();
+        } catch (error) {
+            showToast(error.message || 'Não foi possível excluir o laudo permanentemente.', 'error');
         }
     };
 

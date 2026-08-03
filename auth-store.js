@@ -179,6 +179,14 @@ const LaudoDB = (function () {
             laudo.restoredBy = actor.id;
             return await LaudoDB.saveLaudo(laudo);
         },
+        permanentlyDeleteLaudo: async (id, actor) => {
+            if (!AuthManager.isAdmin(actor)) throw new Error('Somente o administrador pode excluir laudos permanentemente.');
+            const laudos = await getAll('laudos');
+            const laudo = laudos.find(item => item.id === id);
+            if (!laudo?.deletedAt) throw new Error('O laudo precisa estar na lixeira antes da exclusão permanente.');
+            await FirebaseSync.permanentlyDeleteLaudo(id);
+            return await remove('laudos', id);
+        },
         getClients: async () => {
             const local = await getAll('clients');
             return local;
@@ -282,6 +290,24 @@ const FirebaseSync = (function () {
         return true;
     }
 
+    async function permanentlyDeleteLaudo(id) {
+        if (!dbFirebase || !id) throw new Error('Firebase indisponível.');
+        const laudoRef = dbFirebase.collection('laudos').doc(id);
+        const laudoSnapshot = await laudoRef.get();
+        if (!laudoSnapshot.exists || !laudoSnapshot.data().deletedAt) {
+            throw new Error('O laudo não está mais na lixeira. Atualize a lista e tente novamente.');
+        }
+        const imagesSnapshot = await laudoRef.collection('images').get();
+        if (imagesSnapshot.size > 498) {
+            throw new Error('Este laudo possui fotos fragmentadas demais para exclusão segura.');
+        }
+        const batch = dbFirebase.batch();
+        imagesSnapshot.docs.forEach(doc => batch.delete(doc.ref));
+        batch.delete(laudoRef);
+        await batch.commit();
+        return true;
+    }
+
     async function pushAllLocalToFirebase() {
         if (!dbFirebase) return;
         try {
@@ -376,6 +402,7 @@ const FirebaseSync = (function () {
     return {
         pushItem,
         removeItem,
+        permanentlyDeleteLaudo,
         pushAllLocalToFirebase,
         startForUser: initListeners,
         stop: stopListeners,
