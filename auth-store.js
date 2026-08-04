@@ -338,7 +338,9 @@ const FirebaseSync = (function () {
         if (!source || !source.startsWith('data:image/')) return source || '';
         if (!dbFirebase) throw new Error('Firebase não está disponível para enviar as fotos.');
         const imagesRef = dbFirebase.collection('laudos').doc(laudoId).collection('images');
-        const existing = await imagesRef.get();
+        // A consulta precisa declarar o autor para satisfazer as regras do
+        // Firestore. Consultar a subcoleção inteira é recusado para consultores.
+        const existing = await imagesRef.where('authorId', '==', authorId).get();
         const batch = dbFirebase.batch();
 
         // Mantém cada documento confortavelmente abaixo do limite de 1 MiB do Firestore.
@@ -362,7 +364,12 @@ const FirebaseSync = (function () {
         const match = source.match(/^firestore-image:\/\/([^/]+)\/(40x|100x)$/);
         if (!match || !dbFirebase) return '';
         const [, laudoId, type] = match;
-        const snapshot = await dbFirebase.collection('laudos').doc(laudoId).collection('images').get();
+        const imagesRef = dbFirebase.collection('laudos').doc(laudoId).collection('images');
+        const currentUser = typeof AuthManager !== 'undefined' ? AuthManager.getCurrentUser() : null;
+        const query = currentUser && !AuthManager.isAdmin(currentUser) && currentUser.role === 'consultor'
+            ? imagesRef.where('authorId', '==', currentUser.id)
+            : imagesRef;
+        const snapshot = await query.get();
         return snapshot.docs
             .map(doc => doc.data())
             .filter(part => part.type === type)
