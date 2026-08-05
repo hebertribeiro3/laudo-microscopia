@@ -240,18 +240,40 @@ const FirebaseSync = (function () {
         activeUserId = null;
     }
 
-    function listen(query, storeName) {
-        const unsubscribe = query.onSnapshot(snapshot => {
-            snapshot.docChanges().forEach(async change => {
-                const id = change.doc.id;
-                if (change.type === 'removed') {
-                    await LaudoDB.removeLocal(storeName, id);
-                    return;
+    async function getLocalItems(storeName) {
+        if (storeName === 'users') return await LaudoDB.getUsersLocal();
+        if (storeName === 'laudos') return await LaudoDB.getLaudosLocal();
+        if (storeName === 'clients') return await LaudoDB.getClientsLocal();
+        return [];
+    }
+
+    function listen(query, storeName, belongsToScope) {
+        const unsubscribe = query.onSnapshot(async snapshot => {
+            try {
+                // Primeiro aplica tudo que existe no servidor.
+                for (const doc of snapshot.docs) {
+                    const value = { ...doc.data(), id: doc.id, syncStatus: 'synced' };
+                    await LaudoDB.putLocal(storeName, value);
                 }
-                const value = { ...change.doc.data(), id, syncStatus: 'synced' };
-                await LaudoDB.putLocal(storeName, value);
-            });
-            window.dispatchEvent(new CustomEvent('firebase-data-synced', { detail: { storeName } }));
+
+                // Depois remove do cache apenas os itens deste mesmo escopo que
+                // não existem mais no Firebase. Isso elimina registros fantasmas
+                // em aparelhos que estavam offline durante uma exclusão.
+                if (!snapshot.metadata.fromCache) {
+                    const remoteIds = new Set(snapshot.docs.map(doc => doc.id));
+                    const localItems = await getLocalItems(storeName);
+                    for (const item of localItems) {
+                        const inScope = belongsToScope ? belongsToScope(item) : true;
+                        const isPending = storeName === 'laudos' && item.syncStatus === 'pending';
+                        if (inScope && !isPending && !remoteIds.has(item.id)) {
+                            await LaudoDB.removeLocal(storeName, item.id);
+                        }
+                    }
+                }
+                window.dispatchEvent(new CustomEvent('firebase-data-synced', { detail: { storeName } }));
+            } catch (error) {
+                console.warn(`[Firebase] Reconciliação ${storeName}:`, error);
+            }
         }, err => console.warn(`[Firebase] Listener ${storeName}:`, err));
         unsubscribers.push(unsubscribe);
     }
@@ -262,19 +284,19 @@ const FirebaseSync = (function () {
         activeUserId = user.id;
 
         if (AuthManager.isAdmin(user)) {
-            listen(dbFirebase.collection('users'), 'users');
-            listen(dbFirebase.collection('laudos'), 'laudos');
-            listen(dbFirebase.collection('clients'), 'clients');
+            listen(dbFirebase.collection('users'), 'users', () => true);
+            listen(dbFirebase.collection('laudos'), 'laudos', () => true);
+            listen(dbFirebase.collection('clients'), 'clients', () => true);
         } else if (user.role === 'coordenador') {
-            listen(dbFirebase.collection('users').where('coordinatorId', '==', user.id), 'users');
-            listen(dbFirebase.collection('users').where(firebase.firestore.FieldPath.documentId(), '==', user.id), 'users');
-            listen(dbFirebase.collection('laudos').where('coordinatorId', '==', user.id), 'laudos');
-            listen(dbFirebase.collection('laudos').where('authorId', '==', user.id), 'laudos');
-            listen(dbFirebase.collection('clients').where('userId', '==', user.id), 'clients');
+            listen(dbFirebase.collection('users').where('coordinatorId', '==', user.id), 'users', item => item.coordinatorId === user.id);
+            listen(dbFirebase.collection('users').where(firebase.firestore.FieldPath.documentId(), '==', user.id), 'users', item => item.id === user.id);
+            listen(dbFirebase.collection('laudos').where('coordinatorId', '==', user.id), 'laudos', item => item.coordinatorId === user.id);
+            listen(dbFirebase.collection('laudos').where('authorId', '==', user.id), 'laudos', item => item.authorId === user.id);
+            listen(dbFirebase.collection('clients').where('userId', '==', user.id), 'clients', item => item.userId === user.id);
         } else {
-            listen(dbFirebase.collection('users').where(firebase.firestore.FieldPath.documentId(), '==', user.id), 'users');
-            listen(dbFirebase.collection('laudos').where('authorId', '==', user.id), 'laudos');
-            listen(dbFirebase.collection('clients').where('userId', '==', user.id), 'clients');
+            listen(dbFirebase.collection('users').where(firebase.firestore.FieldPath.documentId(), '==', user.id), 'users', item => item.id === user.id);
+            listen(dbFirebase.collection('laudos').where('authorId', '==', user.id), 'laudos', item => item.authorId === user.id);
+            listen(dbFirebase.collection('clients').where('userId', '==', user.id), 'clients', item => item.userId === user.id);
         }
     }
 
