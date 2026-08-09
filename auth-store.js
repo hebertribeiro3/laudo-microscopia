@@ -248,7 +248,7 @@ const FirebaseSync = (function () {
     }
 
     function listen(query, storeName, belongsToScope) {
-        const unsubscribe = query.onSnapshot(async snapshot => {
+        const unsubscribe = query.onSnapshot({ includeMetadataChanges: true }, async snapshot => {
             try {
                 // Primeiro aplica tudo que existe no servidor.
                 for (const doc of snapshot.docs) {
