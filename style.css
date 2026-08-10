@@ -738,7 +738,7 @@ textarea {
     height: 100%;
     max-width: 100%;
     max-height: 100%;
-    object-fit: cover; /* Crop to fit cleanly */
+    object-fit: contain; /* Preserva a imagem inteira sem cortar as bordas */
 }
 
 .photo-placeholder {
@@ -1710,7 +1710,7 @@ textarea {
         height: 100% !important;
         max-width: 100% !important;
         max-height: 100% !important;
-        object-fit: cover !important;
+        object-fit: contain !important;
         display: block !important;
     }
 
@@ -1722,5 +1722,4 @@ textarea {
         width: 100% !important;
     }
 }
-
 
