@@ -1,132 +1,22 @@
 document.addEventListener('DOMContentLoaded', () => {
+    // Remove instalações/cache do PWA descontinuado. O site volta a operar
+    // exclusivamente como página web comum, sempre carregando a versão atual.
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.getRegistrations()
+            .then(registrations => Promise.all(registrations.map(registration => registration.unregister())))
+            .catch(error => console.warn('[Atualização] Não foi possível remover o antigo modo instalado:', error));
+    }
+    if ('caches' in window) {
+        caches.keys()
+            .then(keys => Promise.all(keys.filter(key => key.startsWith('laudos-solubio-')).map(key => caches.delete(key))))
+            .catch(error => console.warn('[Atualização] Não foi possível limpar o cache antigo:', error));
+    }
+
     // Form and Inputs Elements
     const form = document.getElementById('laudo-form');
     const btnLoadDemo = document.getElementById('btn-load-demo');
     const btnReset = document.getElementById('btn-reset');
     const btnPrint = document.getElementById('btn-print');
-    const btnInstallPwa = document.getElementById('btn-install-pwa');
-    let deferredInstallPrompt = null;
-
-    const isIos = /iphone|ipad|ipod/i.test(navigator.userAgent);
-    const isStandalone = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
-
-    async function openGeneratedPdf(targetWindow, reportNumber) {
-        if (typeof window.html2canvas !== 'function' || !window.jspdf?.jsPDF) {
-            targetWindow?.close();
-            throw new Error('O gerador de PDF não foi carregado. Verifique a conexão e tente novamente.');
-        }
-
-        const renderHost = document.createElement('div');
-        renderHost.setAttribute('aria-hidden', 'true');
-        Object.assign(renderHost.style, {
-            position: 'fixed',
-            left: '0',
-            top: '0',
-            width: '794px',
-            height: '1123px',
-            overflow: 'hidden',
-            background: '#ffffff',
-            pointerEvents: 'none',
-            zIndex: '-99999'
-        });
-
-        const printableSheet = sheet.cloneNode(true);
-        printableSheet.removeAttribute('id');
-        Object.assign(printableSheet.style, {
-            width: '794px',
-            minWidth: '794px',
-            maxWidth: '794px',
-            height: '1123px',
-            minHeight: '1123px',
-            maxHeight: '1123px',
-            transform: 'none',
-            transformOrigin: 'top left',
-            margin: '0',
-            boxShadow: 'none',
-            overflow: 'hidden',
-            boxSizing: 'border-box'
-        });
-        renderHost.appendChild(printableSheet);
-        document.body.appendChild(renderHost);
-
-        try {
-            if (document.fonts?.ready) await document.fonts.ready;
-            await Promise.all(Array.from(printableSheet.querySelectorAll('img')).map(image => {
-                if (image.complete) return image.decode?.().catch(() => {}) || Promise.resolve();
-                return new Promise(resolve => {
-                    image.addEventListener('load', resolve, { once: true });
-                    image.addEventListener('error', resolve, { once: true });
-                });
-            }));
-
-            const canvas = await window.html2canvas(printableSheet, {
-                scale: 2,
-                backgroundColor: '#ffffff',
-                useCORS: true,
-                logging: false,
-                width: 794,
-                height: 1123,
-                windowWidth: 1200,
-                windowHeight: 1400,
-                scrollX: 0,
-                scrollY: 0
-            });
-            const { jsPDF } = window.jspdf;
-            const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4', compress: true });
-            pdf.addImage(canvas.toDataURL('image/jpeg', 0.94), 'JPEG', 0, 0, 210, 297, undefined, 'FAST');
-            const pdfUrl = URL.createObjectURL(pdf.output('blob'));
-            const safeNumber = String(reportNumber || 'laudo').replace(/[^a-z0-9._-]+/gi, '_');
-
-            if (targetWindow) {
-                targetWindow.location.replace(pdfUrl);
-            } else {
-                const link = document.createElement('a');
-                link.href = pdfUrl;
-                link.download = `Laudo_${safeNumber}.pdf`;
-                document.body.appendChild(link);
-                link.click();
-                link.remove();
-            }
-            setTimeout(() => URL.revokeObjectURL(pdfUrl), 300000);
-        } finally {
-            renderHost.remove();
-        }
-    }
-
-    if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-            navigator.serviceWorker.register('./service-worker.js').catch(error => {
-                console.warn('[PWA] Não foi possível registrar o modo instalável:', error);
-            });
-        });
-    }
-
-    window.addEventListener('beforeinstallprompt', event => {
-        event.preventDefault();
-        deferredInstallPrompt = event;
-        if (btnInstallPwa) btnInstallPwa.classList.remove('hidden');
-    });
-
-    if (btnInstallPwa && isIos && !isStandalone) btnInstallPwa.classList.remove('hidden');
-
-    btnInstallPwa?.addEventListener('click', async () => {
-        if (deferredInstallPrompt) {
-            deferredInstallPrompt.prompt();
-            await deferredInstallPrompt.userChoice;
-            deferredInstallPrompt = null;
-            btnInstallPwa.classList.add('hidden');
-            return;
-        }
-        if (isIos) {
-            showToast('No Safari, toque em Compartilhar e depois em “Adicionar à Tela de Início”.', 'info');
-        }
-    });
-
-    window.addEventListener('appinstalled', () => {
-        deferredInstallPrompt = null;
-        btnInstallPwa?.classList.add('hidden');
-        showToast('Aplicativo instalado com sucesso!', 'success');
-    });
     
     // Zoom Elements
     const btnZoomIn = document.getElementById('zoom-in');
@@ -617,33 +507,14 @@ document.addEventListener('DOMContentLoaded', () => {
         const toastContainer = document.getElementById('toast-container');
         if (toastContainer) toastContainer.innerHTML = '';
 
-        const printWindow = isStandalone ? window.open('about:blank', '_blank') : null;
         const laudoRecord = await saveCurrentLaudo(false); // Sem notificação toast na tela durante a geração do PDF
-        if (!laudoRecord) {
-            printWindow?.close();
-            return;
-        }
+        if (!laudoRecord) return; // Se não estiver logado, interrompe
 
         updatePreview();
 
         const originalZoom = zoomLevel;
         zoomLevel = 100;
         updateZoom();
-
-        if (isStandalone) {
-            if (!printWindow) {
-                showToast('O PDF será baixado porque o celular bloqueou a janela de visualização.', 'info');
-            }
-            try {
-                await openGeneratedPdf(printWindow, laudoRecord.relatorio_num);
-            } catch (error) {
-                showToast(error.message || 'Não foi possível gerar o PDF.', 'error');
-            } finally {
-                zoomLevel = originalZoom;
-                updateZoom();
-            }
-            return;
-        }
 
         setTimeout(() => {
             window.print();
@@ -1834,7 +1705,6 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     window.printLaudoFromRepository = async function(id) {
-        const printWindow = isStandalone ? window.open('about:blank', '_blank') : null;
         const laudos = await LaudoDB.getLaudos();
         const accessible = await AuthManager.filterAccessibleLaudos(laudos, AuthManager.getCurrentUser());
         const found = accessible.find(l => l.id === id);
@@ -1842,17 +1712,7 @@ document.addEventListener('DOMContentLoaded', () => {
             currentEditingLaudoId = found.id;
             await loadFormState(found.formData);
             closeModal('modal-laudos');
-            if (isStandalone) {
-                try {
-                    await openGeneratedPdf(printWindow, found.relatorio_num);
-                } catch (error) {
-                    showToast(error.message || 'Não foi possível gerar o PDF.', 'error');
-                }
-                return;
-            }
             setTimeout(() => window.print(), 300);
-        } else {
-            printWindow?.close();
         }
     };
 
