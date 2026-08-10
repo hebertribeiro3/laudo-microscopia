@@ -565,43 +565,12 @@ const AuthManager = (function () {
             }
         },
 
-        registerConsultant: async (name, email, password, coordinatorId) => {
-            const cleanEmail = email.trim().toLowerCase();
-
-            if (!dbFirebase) {
-                return { success: false, message: 'Firebase não disponível. Verifique sua conexão.' };
-            }
-
-            try {
-                const cred = await firebase.auth().createUserWithEmailAndPassword(cleanEmail, password);
-                const uid = cred.user.uid;
-
-                const newUser = {
-                    id: uid,
-                    name: name.trim(),
-                    email: cleanEmail,
-                    role: 'consultor',
-                    coordinatorId: coordinatorId || null,
-                    mustChangePassword: false,
-                    active: true
-                };
-
-                await dbFirebase.collection('users').doc(uid).set(newUser);
-                await LaudoDB.putLocal('users', newUser);
-                AuthManager.setCurrentUser(newUser);
-                FirebaseSync.startForUser(newUser);
-                return { success: true, user: newUser };
-            } catch (err) {
-                if (err.code === 'auth/email-already-in-use') {
-                    return { success: false, message: 'Já existe um usuário cadastrado com este e-mail.' };
-                }
-                return { success: false, message: err.message || 'Erro ao cadastrar.' };
-            }
-        },
-
         createManagedUser: async (profile, password) => {
             if (!AuthManager.isAdmin(currentUser)) {
                 return { success: false, message: 'Somente o administrador pode criar usuários.' };
+            }
+            if (!password || password.trim().length < 8) {
+                return { success: false, message: 'A senha temporária deve ter no mínimo 8 caracteres.' };
             }
             let secondaryApp;
             let credential;
@@ -647,11 +616,8 @@ const AuthManager = (function () {
 
         changePassword: async (userId, newPassword) => {
             const cleanPass = (newPassword || '').trim();
-            if (cleanPass.length < 3) {
-                return { success: false, message: 'A nova senha deve ter no mínimo 3 caracteres.' };
-            }
-            if (cleanPass === '123') {
-                return { success: false, message: 'Escolha uma nova senha diferente da senha padrão (123).' };
+            if (cleanPass.length < 8) {
+                return { success: false, message: 'A nova senha deve ter no mínimo 8 caracteres.' };
             }
 
             if (typeof firebase !== 'undefined' && firebase.auth && firebase.auth().currentUser) {

@@ -716,9 +716,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function saveToLocalStorage() {
         try {
+            const user = AuthManager.getCurrentUser();
+            if (!user) return;
             const state = getFormState();
-            const userId = AuthManager.getCurrentUser()?.id || 'guest';
-            localStorage.setItem(`laudo_micros_state_${userId}`, JSON.stringify(state));
+            localStorage.setItem(`laudo_micros_state_${user.id}`, JSON.stringify(state));
         } catch (e) {
             console.warn("Quota excedida no LocalStorage para imagens.", e);
         }
@@ -832,14 +833,11 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function loadFromLocalStorage() {
-        const userId = AuthManager.getCurrentUser()?.id || 'guest';
+        const user = AuthManager.getCurrentUser();
+        if (!user) return;
+        const userId = user.id;
         const userKey = `laudo_micros_state_${userId}`;
-        const legacy = localStorage.getItem('laudo_micros_state');
-        const stored = localStorage.getItem(userKey) || legacy;
-        if (legacy && !localStorage.getItem(userKey)) {
-            localStorage.setItem(userKey, legacy);
-            localStorage.removeItem('laudo_micros_state');
-        }
+        const stored = localStorage.getItem(userKey);
         if (!stored) {
             setDefaultDates();
             setPredefinedDefaults();
@@ -864,6 +862,24 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    function clearFormForSignedOutUser() {
+        currentEditingLaudoId = null;
+        form.reset();
+        base64Image40x = '';
+        base64Image100x = '';
+        imgPreview40x.removeAttribute('src');
+        imgPreview100x.removeAttribute('src');
+        imgPreview40x.style.display = 'none';
+        imgPreview100x.style.display = 'none';
+        placeholder40x.style.display = 'block';
+        placeholder100x.style.display = 'block';
+        dropzone40x.querySelector('.file-name').textContent = 'Nenhuma foto selecionada';
+        dropzone100x.querySelector('.file-name').textContent = 'Nenhuma foto selecionada';
+        localStorage.removeItem('laudo_micros_state');
+        localStorage.removeItem('laudo_micros_state_guest');
+        updatePreview();
+    }
+
     // ----------------------------------------------------
     // Save Laudo into IndexedDB
     // ----------------------------------------------------
@@ -879,23 +895,11 @@ document.addEventListener('DOMContentLoaded', () => {
         const laudoId = currentEditingLaudoId || ('laudo_' + Date.now());
         const existingLaudos = currentEditingLaudoId ? await LaudoDB.getLaudos() : [];
         const existing = existingLaudos.find(l => l.id === currentEditingLaudoId) || null;
+        const createdAt = existing?.createdAt || new Date().toISOString();
+        const coordinatorId = existing?.coordinatorId || user.coordinatorId || (user.role === 'coordenador' ? user.id : null);
 
         if (existing && !AuthManager.canEditLaudo(existing, user)) {
             showToast('Você pode visualizar este laudo, mas somente o autor pode editá-lo.', 'error');
-            return null;
-        }
-
-        try {
-            if (state.image40x && state.image40x.startsWith('data:image/')) {
-                state.image40x = await FirebaseSync.uploadLaudoImage(laudoId, user.id, '40x', state.image40x);
-                base64Image40x = state.image40x;
-            }
-            if (state.image100x && state.image100x.startsWith('data:image/')) {
-                state.image100x = await FirebaseSync.uploadLaudoImage(laudoId, user.id, '100x', state.image100x);
-                base64Image100x = state.image100x;
-            }
-        } catch (error) {
-            showToast('Não foi possível enviar as fotos: ' + (error.message || 'erro desconhecido'), 'error');
             return null;
         }
 
@@ -906,6 +910,49 @@ document.addEventListener('DOMContentLoaded', () => {
             if (user.previousId) coordIds.push(user.previousId);
             const coord = users.find(u => coordIds.includes(u.id) || coordIds.includes(u.previousId));
             if (coord) coordName = coord.name;
+        }
+
+        try {
+            if (state.image40x?.startsWith('data:image/') || state.image100x?.startsWith('data:image/')) {
+                const pendingFormData = {
+                    ...state,
+                    image40x: state.image40x?.startsWith('data:image/') ? '' : state.image40x,
+                    image100x: state.image100x?.startsWith('data:image/') ? '' : state.image100x
+                };
+                await FirebaseSync.pushItem('laudos', {
+                    id: laudoId,
+                    relatorio_num: state.relatorio_num || 'Sem Nº',
+                    cliente_fazenda: state.cliente_fazenda === 'Outro' ? state.cliente_fazenda_outro : state.cliente_fazenda,
+                    nome_produto: state.nome_produto === 'Outro' ? state.nome_produto_outro : state.nome_produto,
+                    microrganismo: state.microrganismo,
+                    data_emissao: state.data_emissao,
+                    data_analise: state.data_analise,
+                    authorId: existing?.authorId || user.id,
+                    authorName: existing?.authorName || user.name,
+                    authorRole: existing?.authorRole || user.role,
+                    coordinatorId,
+                    coordinatorName: existing?.coordinatorName || coordName || (user.role === 'coordenador' ? user.name : null),
+                    createdAt,
+                    createdBy: existing?.createdBy || user.id,
+                    updatedAt: new Date().toISOString(),
+                    updatedBy: user.id,
+                    formData: pendingFormData,
+                    imageUploadPending: true
+                });
+            }
+            if (state.image40x && state.image40x.startsWith('data:image/')) {
+                state.image40x = await FirebaseSync.uploadLaudoImage(laudoId, user.id, '40x', state.image40x);
+                base64Image40x = state.image40x;
+            }
+            if (state.image100x && state.image100x.startsWith('data:image/')) {
+                state.image100x = await FirebaseSync.uploadLaudoImage(laudoId, user.id, '100x', state.image100x);
+                base64Image100x = state.image100x;
+            }
+        } catch (error) {
+            currentEditingLaudoId = laudoId;
+            saveToLocalStorage();
+            showToast('O laudo foi preservado, mas as fotos ficaram pendentes. Tente salvar novamente: ' + (error.message || 'erro desconhecido'), 'error');
+            return null;
         }
 
         const laudoRecord = {
@@ -919,13 +966,14 @@ document.addEventListener('DOMContentLoaded', () => {
             authorId: existing?.authorId || user.id,
             authorName: existing?.authorName || user.name,
             authorRole: existing?.authorRole || user.role,
-            coordinatorId: existing?.coordinatorId || user.coordinatorId || (user.role === 'coordenador' ? user.id : null),
+            coordinatorId,
             coordinatorName: existing?.coordinatorName || coordName || (user.role === 'coordenador' ? user.name : null),
-            createdAt: existing?.createdAt || new Date().toISOString(),
+            createdAt,
             createdBy: existing?.createdBy || user.id,
             updatedAt: new Date().toISOString(),
             updatedBy: user.id,
-            formData: state
+            formData: state,
+            imageUploadPending: false
         };
 
         try {
@@ -952,23 +1000,10 @@ document.addEventListener('DOMContentLoaded', () => {
     let failedLoginAttempts = 0;
     let lockoutUntil = 0;
 
-    async function populateRegisterCoordinators() {
-        const select = document.getElementById('reg-coordinator');
-        if (!select) return;
-        const users = await LaudoDB.getUsers();
-        const coords = users.filter(u => u.role === 'coordenador');
-        select.innerHTML = coords.length ? 
-            coords.map(c => `<option value="${c.id}">${c.name}</option>`).join('') :
-            '<option value="">Nenhum coordenador disponível</option>';
-    }
-
     function openModal(id) {
         const el = document.getElementById(id);
         if (el) {
             el.classList.add('active');
-            if (id === 'modal-login') {
-                populateRegisterCoordinators();
-            }
         }
     }
 
@@ -986,36 +1021,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
     document.querySelectorAll('.modal-overlay').forEach(overlay => {
         overlay.addEventListener('click', (e) => {
-            if (e.target === overlay && overlay.id !== 'modal-login') {
+            if (e.target === overlay && overlay.id !== 'modal-login' && overlay.id !== 'modal-change-password') {
                 overlay.classList.remove('active');
             }
         });
     });
 
-    // Auth Segmented Control Tab Switching (Entrar vs Novo Consultor)
-    const tabLoginBtn = document.getElementById('tab-login-btn');
-    const tabRegisterBtn = document.getElementById('tab-register-btn');
     const formLogin = document.getElementById('form-login');
-    const formRegister = document.getElementById('form-register-consultant');
-
-    if (tabLoginBtn && tabRegisterBtn) {
-        tabLoginBtn.addEventListener('click', () => {
-            tabLoginBtn.classList.add('active');
-            tabRegisterBtn.classList.remove('active');
-
-            formLogin.classList.remove('hidden');
-            formRegister.classList.add('hidden');
-        });
-
-        tabRegisterBtn.addEventListener('click', () => {
-            tabRegisterBtn.classList.add('active');
-            tabLoginBtn.classList.remove('active');
-
-            formRegister.classList.remove('hidden');
-            formLogin.classList.add('hidden');
-            populateRegisterCoordinators();
-        });
-    }
 
     // Toggle Password Visibility (Eye Icon)
     document.querySelectorAll('.toggle-password-btn').forEach(btn => {
@@ -1109,44 +1121,6 @@ document.addEventListener('DOMContentLoaded', () => {
             showToast(res.message, 'error');
         }
     });
-
-    // Consultant Auto-Registration Handler
-    if (formRegister) {
-        formRegister.addEventListener('submit', async (e) => {
-            e.preventDefault();
-
-            // 1. Verificação de Armadilha Honeypot
-            const hpVal = document.getElementById('reg-hp')?.value;
-            if (hpVal && hpVal.trim() !== '') {
-                showToast('Cadastro Bloqueado: Atividade automatizada detectada.', 'error');
-                return;
-            }
-
-            const name = document.getElementById('reg-name').value;
-            const email = document.getElementById('reg-email').value;
-            const pass = document.getElementById('reg-password').value;
-            const coordId = document.getElementById('reg-coordinator').value;
-
-            const res = await AuthManager.registerConsultant(name, email, pass, coordId);
-            if (res.success) {
-                closeModal('modal-login');
-                renderUserSessionBar();
-                setPredefinedDefaults();
-
-                if (pass === '123') {
-                    showToast(`Cadastro realizado! Por favor, crie sua nova senha pessoal.`, 'warning');
-                    setTimeout(() => {
-                        openModal('modal-change-password');
-                    }, 400);
-                } else {
-                    showToast(`Cadastro realizado com sucesso! Bem-vindo, ${res.user.name}.`, 'success');
-                    checkFirstLoginClients();
-                }
-            } else {
-                showToast(res.message, 'error');
-            }
-        });
-    }
 
     // Change Password Form Handler
     const formChangePassword = document.getElementById('form-change-password');
@@ -1317,7 +1291,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (myClients.length > 0) {
             html += '<optgroup label="⭐ Meus Clientes Cadastrados">';
             myClients.forEach(c => {
-                html += `<option value="${c.name}">${c.name}</option>`;
+                html += `<option value="${escapeHTML(c.name)}">${escapeHTML(c.name)}</option>`;
             });
             html += '</optgroup>';
         }
@@ -1327,7 +1301,7 @@ document.addEventListener('DOMContentLoaded', () => {
             html += '<optgroup label="📋 Clientes Padrão (Dados)">';
             DADOS_PREDEFINED_CLIENTS.forEach(clientName => {
                 if (!myClients.some(c => c.name === clientName)) {
-                    html += `<option value="${clientName}">${clientName}</option>`;
+                    html += `<option value="${escapeHTML(clientName)}">${escapeHTML(clientName)}</option>`;
                 }
             });
             html += '</optgroup>';
@@ -1750,7 +1724,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (coordSelect) {
             const coords = users.filter(u => u.role === 'coordenador');
             coordSelect.innerHTML = '<option value="">Nenhum (Independente)</option>' +
-                coords.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+                coords.map(c => `<option value="${escapeHTML(c.id)}">${escapeHTML(c.name)}</option>`).join('');
         }
 
         tbody.innerHTML = users.filter(u => u.active !== false).map(u => {
@@ -1834,7 +1808,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const users = await LaudoDB.getUsers();
         const coords = users.filter(u => u.role === 'coordenador');
         select.innerHTML = '<option value="">Nenhum (Independente)</option>' +
-            coords.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+            coords.map(c => `<option value="${escapeHTML(c.id)}">${escapeHTML(c.name)}</option>`).join('');
     }
 
     function toggleGroupCoordSelect() {
@@ -1854,8 +1828,8 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('user-edit-id').value = '';
         document.getElementById('user-input-name').value = '';
         document.getElementById('user-input-email').value = '';
-        document.getElementById('user-input-pass').value = '123';
-        document.getElementById('user-input-pass').placeholder = 'Senha inicial';
+        document.getElementById('user-input-pass').value = '';
+        document.getElementById('user-input-pass').placeholder = 'Senha temporária (mínimo 8 caracteres)';
         document.getElementById('user-input-pass').required = true;
         document.getElementById('user-input-role').value = 'consultor';
         document.getElementById('user-input-coord').value = '';
@@ -1897,8 +1871,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                 }
             } else {
-                if (!pass || pass.length < 3) {
-                    showToast('Defina uma senha de no mínimo 3 caracteres para o novo usuário.', 'error');
+                if (!pass || pass.length < 8) {
+                    showToast('Defina uma senha temporária de no mínimo 8 caracteres para o novo usuário.', 'error');
                     return;
                 }
                 const result = await AuthManager.createManagedUser({
@@ -2038,8 +2012,14 @@ document.addEventListener('DOMContentLoaded', () => {
     window.addEventListener('auth-state-changed', async event => {
         await renderUserSessionBar();
         currentEditingLaudoId = null;
+        const user = event.detail?.user;
+        if (!user) {
+            clearFormForSignedOutUser();
+            return;
+        }
         loadFromLocalStorage();
-        if (event.detail?.user) await FirebaseSync.syncPendingForUser(event.detail.user);
+        if (user.mustChangePassword) openModal('modal-change-password');
+        await FirebaseSync.syncPendingForUser(user);
     });
 
     window.addEventListener('firebase-data-synced', () => {
@@ -2048,7 +2028,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // Initialize Application Auth & Session State
-    loadFromLocalStorage();
+    clearFormForSignedOutUser();
     renderUserSessionBar();
     updateZoom();
 });
