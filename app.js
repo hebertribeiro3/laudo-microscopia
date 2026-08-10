@@ -4,6 +4,46 @@ document.addEventListener('DOMContentLoaded', () => {
     const btnLoadDemo = document.getElementById('btn-load-demo');
     const btnReset = document.getElementById('btn-reset');
     const btnPrint = document.getElementById('btn-print');
+    const btnInstallPwa = document.getElementById('btn-install-pwa');
+    let deferredInstallPrompt = null;
+
+    const isIos = /iphone|ipad|ipod/i.test(navigator.userAgent);
+    const isStandalone = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('./service-worker.js').catch(error => {
+                console.warn('[PWA] Não foi possível registrar o modo instalável:', error);
+            });
+        });
+    }
+
+    window.addEventListener('beforeinstallprompt', event => {
+        event.preventDefault();
+        deferredInstallPrompt = event;
+        if (btnInstallPwa) btnInstallPwa.classList.remove('hidden');
+    });
+
+    if (btnInstallPwa && isIos && !isStandalone) btnInstallPwa.classList.remove('hidden');
+
+    btnInstallPwa?.addEventListener('click', async () => {
+        if (deferredInstallPrompt) {
+            deferredInstallPrompt.prompt();
+            await deferredInstallPrompt.userChoice;
+            deferredInstallPrompt = null;
+            btnInstallPwa.classList.add('hidden');
+            return;
+        }
+        if (isIos) {
+            showToast('No Safari, toque em Compartilhar e depois em “Adicionar à Tela de Início”.', 'info');
+        }
+    });
+
+    window.addEventListener('appinstalled', () => {
+        deferredInstallPrompt = null;
+        btnInstallPwa?.classList.add('hidden');
+        showToast('Aplicativo instalado com sucesso!', 'success');
+    });
     
     // Zoom Elements
     const btnZoomIn = document.getElementById('zoom-in');

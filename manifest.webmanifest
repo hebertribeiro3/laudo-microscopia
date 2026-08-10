@@ -1,0 +1,21 @@
+{
+  "name": "Laudos de Microscopia - Solubio On Farm",
+  "short_name": "Laudos Solubio",
+  "description": "Criação e gerenciamento de laudos de microscopia.",
+  "id": "./",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f4f7f5",
+  "theme_color": "#003e15",
+  "lang": "pt-BR",
+  "orientation": "any",
+  "icons": [
+    {
+      "src": "pwa-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
