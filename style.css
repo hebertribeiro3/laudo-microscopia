@@ -176,6 +176,8 @@ label {
 }
 
 input[type="text"],
+input[type="email"],
+input[type="password"],
 input[type="date"],
 textarea,
 select {
@@ -191,11 +193,15 @@ select {
 }
 
 input[type="text"]::placeholder,
+input[type="email"]::placeholder,
+input[type="password"]::placeholder,
 textarea::placeholder {
     color: var(--text-muted);
 }
 
 input[type="text"]:focus,
+input[type="email"]:focus,
+input[type="password"]:focus,
 input[type="date"]:focus,
 textarea:focus {
     border-color: var(--solubio-light);
@@ -1447,6 +1453,22 @@ textarea {
     color: var(--solubio-dark);
 }
 
+.password-input-compact {
+    position: relative;
+    width: 100%;
+}
+
+.password-input-compact input {
+    width: 100%;
+    padding-right: 38px;
+    box-sizing: border-box;
+}
+
+.password-input-compact .toggle-password-btn {
+    top: 50%;
+    transform: translateY(-50%);
+}
+
 /* Utility Margin Classes */
 .mb-1 { margin-bottom: 6px !important; }
 .mb-2 { margin-bottom: 12px !important; }
@@ -1700,6 +1722,5 @@ textarea {
         width: 100% !important;
     }
 }
-
 
 
