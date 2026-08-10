@@ -16,21 +16,60 @@ document.addEventListener('DOMContentLoaded', () => {
             throw new Error('O gerador de PDF não foi carregado. Verifique a conexão e tente novamente.');
         }
 
-        const originalTransform = sheet.style.transform;
-        const originalTransformOrigin = sheet.style.transformOrigin;
-        sheet.style.transform = 'none';
-        sheet.style.transformOrigin = 'top left';
+        const renderHost = document.createElement('div');
+        renderHost.setAttribute('aria-hidden', 'true');
+        Object.assign(renderHost.style, {
+            position: 'fixed',
+            left: '0',
+            top: '0',
+            width: '794px',
+            height: '1123px',
+            overflow: 'hidden',
+            background: '#ffffff',
+            pointerEvents: 'none',
+            zIndex: '-99999'
+        });
+
+        const printableSheet = sheet.cloneNode(true);
+        printableSheet.removeAttribute('id');
+        Object.assign(printableSheet.style, {
+            width: '794px',
+            minWidth: '794px',
+            maxWidth: '794px',
+            height: '1123px',
+            minHeight: '1123px',
+            maxHeight: '1123px',
+            transform: 'none',
+            transformOrigin: 'top left',
+            margin: '0',
+            boxShadow: 'none',
+            overflow: 'hidden',
+            boxSizing: 'border-box'
+        });
+        renderHost.appendChild(printableSheet);
+        document.body.appendChild(renderHost);
 
         try {
-            const canvas = await window.html2canvas(sheet, {
+            if (document.fonts?.ready) await document.fonts.ready;
+            await Promise.all(Array.from(printableSheet.querySelectorAll('img')).map(image => {
+                if (image.complete) return image.decode?.().catch(() => {}) || Promise.resolve();
+                return new Promise(resolve => {
+                    image.addEventListener('load', resolve, { once: true });
+                    image.addEventListener('error', resolve, { once: true });
+                });
+            }));
+
+            const canvas = await window.html2canvas(printableSheet, {
                 scale: 2,
                 backgroundColor: '#ffffff',
                 useCORS: true,
                 logging: false,
-                width: sheet.scrollWidth,
-                height: sheet.scrollHeight,
-                windowWidth: sheet.scrollWidth,
-                windowHeight: sheet.scrollHeight
+                width: 794,
+                height: 1123,
+                windowWidth: 1200,
+                windowHeight: 1400,
+                scrollX: 0,
+                scrollY: 0
             });
             const { jsPDF } = window.jspdf;
             const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4', compress: true });
@@ -50,8 +89,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             setTimeout(() => URL.revokeObjectURL(pdfUrl), 300000);
         } finally {
-            sheet.style.transform = originalTransform;
-            sheet.style.transformOrigin = originalTransformOrigin;
+            renderHost.remove();
         }
     }
 
