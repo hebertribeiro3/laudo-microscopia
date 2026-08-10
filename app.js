@@ -1003,11 +1003,19 @@ document.addEventListener('DOMContentLoaded', () => {
     function openModal(id) {
         const el = document.getElementById(id);
         if (el) {
+            if (id === 'modal-change-password') {
+                const closeButton = document.getElementById('close-change-password');
+                if (closeButton) closeButton.style.display = AuthManager.getCurrentUser()?.mustChangePassword ? 'none' : '';
+            }
             el.classList.add('active');
         }
     }
 
     function closeModal(id) {
+        if (id === 'modal-change-password' && AuthManager.getCurrentUser()?.mustChangePassword) {
+            showToast('Você precisa definir uma nova senha antes de continuar.', 'info');
+            return;
+        }
         const el = document.getElementById(id);
         if (el) el.classList.remove('active');
     }
@@ -1021,8 +1029,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     document.querySelectorAll('.modal-overlay').forEach(overlay => {
         overlay.addEventListener('click', (e) => {
-            if (e.target === overlay && overlay.id !== 'modal-login' && overlay.id !== 'modal-change-password') {
-                overlay.classList.remove('active');
+            if (e.target === overlay && overlay.id !== 'modal-login') {
+                closeModal(overlay.id);
             }
         });
     });
