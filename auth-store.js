@@ -162,6 +162,10 @@ const LaudoDB = (function () {
             const laudo = laudos.find(l => l.id === id);
             if (!laudo) return false;
             if (!AuthManager.canDeleteLaudo(laudo, actor)) throw new Error('Você não tem permissão para excluir este laudo.');
+            if (laudo.syncStatus === 'pending' && !(await FirebaseSync.laudoExists(id))) {
+                await remove('laudos', id);
+                return { removedPending: true };
+            }
             laudo.deletedAt = new Date().toISOString();
             laudo.deletedBy = actor.id;
             laudo.deletedByName = actor.name;
@@ -316,7 +320,10 @@ const FirebaseSync = (function () {
         if (!dbFirebase || !id) throw new Error('Firebase indisponível.');
         const laudoRef = dbFirebase.collection('laudos').doc(id);
         const laudoSnapshot = await laudoRef.get();
-        if (!laudoSnapshot.exists || !laudoSnapshot.data().deletedAt) {
+        if (!laudoSnapshot.exists) {
+            return { alreadyAbsent: true };
+        }
+        if (!laudoSnapshot.data().deletedAt) {
             throw new Error('O laudo não está mais na lixeira. Atualize a lista e tente novamente.');
         }
         const imagesSnapshot = await laudoRef.collection('images').get();
@@ -328,6 +335,12 @@ const FirebaseSync = (function () {
         batch.delete(laudoRef);
         await batch.commit();
         return true;
+    }
+
+    async function laudoExists(id) {
+        if (!dbFirebase || !id) return true;
+        const snapshot = await dbFirebase.collection('laudos').doc(id).get();
+        return snapshot.exists;
     }
 
     async function pushAllLocalToFirebase() {
@@ -432,6 +445,7 @@ const FirebaseSync = (function () {
         pushItem,
         removeItem,
         permanentlyDeleteLaudo,
+        laudoExists,
         pushAllLocalToFirebase,
         startForUser: initListeners,
         stop: stopListeners,

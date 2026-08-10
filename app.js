@@ -1706,9 +1706,9 @@ document.addEventListener('DOMContentLoaded', () => {
     window.deleteLaudoFromRepository = async function(id) {
         if (confirm("Tem certeza que deseja mover este laudo para a lixeira?")) {
             try {
-                await LaudoDB.deleteLaudo(id, AuthManager.getCurrentUser());
+                const result = await LaudoDB.deleteLaudo(id, AuthManager.getCurrentUser());
                 if (currentEditingLaudoId === id) currentEditingLaudoId = null;
-                showToast("Laudo movido para a lixeira.", 'info');
+                showToast(result?.removedPending ? 'Laudo pendente removido deste aparelho.' : 'Laudo movido para a lixeira.', 'info');
                 renderLaudosRepository();
             } catch (error) {
                 showToast(error.message || 'Não foi possível excluir o laudo.', 'error');
@@ -1810,6 +1810,7 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('user-input-pass').placeholder = 'Deixe em branco para manter';
         document.getElementById('user-input-pass').required = false;
         document.getElementById('user-input-role').value = AuthManager.isAdmin(found) ? 'admin' : found.role;
+        document.getElementById('user-input-role').disabled = found.id === AuthManager.getCurrentUser()?.id && AuthManager.isAdmin(found);
         document.getElementById('user-input-coord').value = found.coordinatorId || '';
 
         toggleGroupCoordSelect();
@@ -1861,6 +1862,7 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('user-input-pass').placeholder = 'Senha temporária (mínimo 8 caracteres)';
         document.getElementById('user-input-pass').required = true;
         document.getElementById('user-input-role').value = 'consultor';
+        document.getElementById('user-input-role').disabled = false;
         document.getElementById('user-input-coord').value = '';
         toggleGroupCoordSelect();
         document.getElementById('form-user-edit').classList.remove('hidden');
@@ -1878,8 +1880,9 @@ document.addEventListener('DOMContentLoaded', () => {
             const email = document.getElementById('user-input-email').value;
             const pass = document.getElementById('user-input-pass').value;
             const selectedRole = document.getElementById('user-input-role').value;
-            const role = selectedRole === 'admin' ? 'consultor' : selectedRole;
-            const isAdmin = selectedRole === 'admin';
+            const editingSelfAsAdmin = editId === AuthManager.getCurrentUser()?.id && AuthManager.isAdmin();
+            const role = (selectedRole === 'admin' || editingSelfAsAdmin) ? 'consultor' : selectedRole;
+            const isAdmin = selectedRole === 'admin' || editingSelfAsAdmin;
             const coordId = document.getElementById('user-input-coord').value || null;
 
             if (editId) {
