@@ -696,16 +696,17 @@ textarea {
 /* Photos Container */
 .photos-container {
     display: flex;
-    gap: 15px;
-    justify-content: center;
+    gap: 12px;
+    justify-content: space-between;
+    width: 100%;
     margin-top: 2px;
     flex: 1;
     min-height: 0;
 }
 
 .photo-box {
-    flex: 0 0 42%;
-    max-width: 42%;
+    flex: 1 1 0;
+    max-width: none;
     box-sizing: border-box;
     border: 1px solid #000000;
     display: flex;
@@ -1681,16 +1682,17 @@ textarea {
 
     .photos-container {
         display: flex !important;
-        gap: 15px !important;
-        justify-content: center !important;
+        gap: 12px !important;
+        justify-content: space-between !important;
+        width: 100% !important;
         margin-top: 2px !important;
         flex: 1 1 auto !important;
         min-height: 0 !important;
     }
 
     .photo-box {
-        flex: 0 0 42% !important;
-        max-width: 42% !important;
+        flex: 1 1 0 !important;
+        max-width: none !important;
         box-sizing: border-box !important;
         border: 1px solid #000000 !important;
         display: flex !important;
