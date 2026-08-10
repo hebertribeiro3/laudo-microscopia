@@ -9,6 +9,40 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const isIos = /iphone|ipad|ipod/i.test(navigator.userAgent);
     const isStandalone = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+    let printRequestHandled = false;
+
+    function getExternalPrintUrl(laudoId) {
+        const url = new URL('https://laudo-a366a.firebaseapp.com/');
+        url.searchParams.set('printLaudo', laudoId);
+        return url.toString();
+    }
+
+    async function processExternalPrintRequest(user) {
+        const laudoId = new URLSearchParams(window.location.search).get('printLaudo');
+        if (!laudoId || !user || printRequestHandled || !window.dbFirebase) return;
+        printRequestHandled = true;
+
+        try {
+            const snapshot = await window.dbFirebase.collection('laudos').doc(laudoId).get();
+            if (!snapshot.exists) throw new Error('Laudo não encontrado no servidor.');
+            const laudo = { ...snapshot.data(), id: snapshot.id };
+            if (!laudo.formData) throw new Error('Este laudo não possui dados para impressão.');
+
+            await loadFormState(laudo.formData);
+            currentEditingLaudoId = laudo.id;
+            updatePreview();
+            closeModal('modal-login');
+
+            const cleanUrl = new URL(window.location.href);
+            cleanUrl.searchParams.delete('printLaudo');
+            window.history.replaceState({}, document.title, cleanUrl.toString());
+
+            setTimeout(() => window.print(), 500);
+        } catch (error) {
+            printRequestHandled = false;
+            showToast('Não foi possível abrir o laudo para PDF: ' + (error.message || ''), 'error');
+        }
+    }
 
     if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
@@ -534,14 +568,31 @@ document.addEventListener('DOMContentLoaded', () => {
         const toastContainer = document.getElementById('toast-container');
         if (toastContainer) toastContainer.innerHTML = '';
 
+        const printWindow = isStandalone ? window.open('about:blank', '_blank') : null;
         const laudoRecord = await saveCurrentLaudo(false); // Sem notificação toast na tela durante a geração do PDF
-        if (!laudoRecord) return; // Se não estiver logado, interrompe
+        if (!laudoRecord) {
+            printWindow?.close();
+            return;
+        }
 
         updatePreview();
 
         const originalZoom = zoomLevel;
         zoomLevel = 100;
         updateZoom();
+
+        if (isStandalone) {
+            if (!printWindow) {
+                showToast('O celular bloqueou a janela do PDF. Permita pop-ups para este aplicativo e tente novamente.', 'error');
+                zoomLevel = originalZoom;
+                updateZoom();
+                return;
+            }
+            printWindow.location.href = getExternalPrintUrl(laudoRecord.id);
+            zoomLevel = originalZoom;
+            updateZoom();
+            return;
+        }
 
         setTimeout(() => {
             window.print();
@@ -1732,6 +1783,7 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     window.printLaudoFromRepository = async function(id) {
+        const printWindow = isStandalone ? window.open('about:blank', '_blank') : null;
         const laudos = await LaudoDB.getLaudos();
         const accessible = await AuthManager.filterAccessibleLaudos(laudos, AuthManager.getCurrentUser());
         const found = accessible.find(l => l.id === id);
@@ -1739,7 +1791,17 @@ document.addEventListener('DOMContentLoaded', () => {
             currentEditingLaudoId = found.id;
             await loadFormState(found.formData);
             closeModal('modal-laudos');
+            if (isStandalone) {
+                if (!printWindow) {
+                    showToast('O celular bloqueou a janela do PDF. Permita pop-ups e tente novamente.', 'error');
+                    return;
+                }
+                printWindow.location.href = getExternalPrintUrl(found.id);
+                return;
+            }
             setTimeout(() => window.print(), 300);
+        } else {
+            printWindow?.close();
         }
     };
 
@@ -2092,6 +2154,7 @@ document.addEventListener('DOMContentLoaded', () => {
         loadFromLocalStorage();
         if (user.mustChangePassword) openModal('modal-change-password');
         await FirebaseSync.syncPendingForUser(user);
+        await processExternalPrintRequest(user);
     });
 
     window.addEventListener('firebase-data-synced', () => {
