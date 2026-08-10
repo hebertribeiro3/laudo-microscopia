@@ -1027,6 +1027,27 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
+    const allowedTableActions = new Set([
+        'editClientFromTable',
+        'deleteClientFromTable',
+        'loadLaudoFromRepository',
+        'printLaudoFromRepository',
+        'deleteLaudoFromRepository',
+        'restoreLaudoFromRepository',
+        'permanentlyDeleteLaudoFromRepository',
+        'editUserFromTable',
+        'deleteUserFromTable',
+        'openConsultantLaudos'
+    ]);
+
+    document.addEventListener('click', event => {
+        const button = event.target.closest('[data-app-action]');
+        if (!button) return;
+        const action = button.dataset.appAction;
+        const handler = allowedTableActions.has(action) ? window[action] : null;
+        if (typeof handler === 'function') handler(button.dataset.id);
+    });
+
     document.querySelectorAll('.modal-overlay').forEach(overlay => {
         overlay.addEventListener('click', (e) => {
             if (e.target === overlay && overlay.id !== 'modal-login') {
@@ -1370,10 +1391,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 <td><strong>${escapeHTML(c.name)}</strong></td>
                 <td style="text-align: right;">
                     <div class="table-actions" style="justify-content: flex-end;">
-                        <button type="button" class="btn-sm-action btn-view" onclick="editClientFromTable('${escapeHTML(c.id)}')" title="Editar">
+                        <button type="button" class="btn-sm-action btn-view" data-app-action="editClientFromTable" data-id="${escapeHTML(c.id)}" title="Editar">
                             <i class="fa-solid fa-pen"></i> Editar
                         </button>
-                        <button type="button" class="btn-sm-action btn-del" onclick="deleteClientFromTable('${escapeHTML(c.id)}')" title="Excluir">
+                        <button type="button" class="btn-sm-action btn-del" data-app-action="deleteClientFromTable" data-id="${escapeHTML(c.id)}" title="Excluir">
                             <i class="fa-solid fa-trash"></i> Excluir
                         </button>
                     </div>
@@ -1626,19 +1647,19 @@ document.addEventListener('DOMContentLoaded', () => {
                         <td>${statusLabel}</td>
                         <td style="text-align: right;">
                             <div class="table-actions" style="justify-content: flex-end;">
-                                ${canEdit ? `<button type="button" class="btn-sm-action btn-view" onclick="loadLaudoFromRepository('${escapeHTML(l.id)}')" title="Editar / Carregar">
+                                ${canEdit ? `<button type="button" class="btn-sm-action btn-view" data-app-action="loadLaudoFromRepository" data-id="${escapeHTML(l.id)}" title="Editar / Carregar">
                                     <i class="fa-solid fa-pen-to-square"></i> Editar
                                 </button>` : ''}
-                                <button type="button" class="btn-sm-action btn-print-sm" onclick="printLaudoFromRepository('${escapeHTML(l.id)}')" title="Imprimir PDF">
+                                <button type="button" class="btn-sm-action btn-print-sm" data-app-action="printLaudoFromRepository" data-id="${escapeHTML(l.id)}" title="Imprimir PDF">
                                     <i class="fa-solid fa-print"></i> PDF
                                 </button>
-                                ${canDelete ? `<button type="button" class="btn-sm-action btn-del" onclick="deleteLaudoFromRepository('${escapeHTML(l.id)}')" title="Excluir">
+                                ${canDelete ? `<button type="button" class="btn-sm-action btn-del" data-app-action="deleteLaudoFromRepository" data-id="${escapeHTML(l.id)}" title="Excluir">
                                     <i class="fa-solid fa-trash"></i>
                                 </button>` : ''}
-                                ${isDeleted && AuthManager.isAdmin(currentUser) ? `<button type="button" class="btn-sm-action btn-view" onclick="restoreLaudoFromRepository('${escapeHTML(l.id)}')" title="Restaurar">
+                                ${isDeleted && AuthManager.isAdmin(currentUser) ? `<button type="button" class="btn-sm-action btn-view" data-app-action="restoreLaudoFromRepository" data-id="${escapeHTML(l.id)}" title="Restaurar">
                                     <i class="fa-solid fa-rotate-left"></i> Restaurar
                                 </button>` : ''}
-                                ${isDeleted && AuthManager.isAdmin(currentUser) ? `<button type="button" class="btn-sm-action btn-del" onclick="permanentlyDeleteLaudoFromRepository('${escapeHTML(l.id)}')" title="Excluir definitivamente">
+                                ${isDeleted && AuthManager.isAdmin(currentUser) ? `<button type="button" class="btn-sm-action btn-del" data-app-action="permanentlyDeleteLaudoFromRepository" data-id="${escapeHTML(l.id)}" title="Excluir definitivamente">
                                     <i class="fa-solid fa-trash-can"></i> Definitivo
                                 </button>` : ''}
                             </div>
@@ -1760,11 +1781,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     <td>${coordName}</td>
                     <td style="text-align: right;">
                         <div class="table-actions" style="justify-content: flex-end;">
-                            <button type="button" class="btn-sm-action btn-view" onclick="editUserFromTable('${escapeHTML(u.id)}')" title="Editar">
+                            <button type="button" class="btn-sm-action btn-view" data-app-action="editUserFromTable" data-id="${escapeHTML(u.id)}" title="Editar">
                                 <i class="fa-solid fa-pen"></i> Editar
                             </button>
                             ${!AuthManager.isAdmin(u) ? `
-                                <button type="button" class="btn-sm-action btn-del" onclick="deleteUserFromTable('${escapeHTML(u.id)}')" title="Excluir">
+                                <button type="button" class="btn-sm-action btn-del" data-app-action="deleteUserFromTable" data-id="${escapeHTML(u.id)}" title="Excluir">
                                     <i class="fa-solid fa-trash"></i> Excluir
                                 </button>
                             ` : ''}
@@ -1971,7 +1992,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <td>${escapeHTML(c.email)}</td>
                     <td style="text-align: center;"><strong>${count}</strong> laudos</td>
                     <td style="text-align: right;">
-                        <button type="button" class="btn-sm-action btn-view" onclick="openConsultantLaudos('${escapeHTML(c.id)}')">
+                        <button type="button" class="btn-sm-action btn-view" data-app-action="openConsultantLaudos" data-id="${escapeHTML(c.id)}">
                             <i class="fa-solid fa-folder-open"></i> Ver Laudos
                         </button>
                     </td>
