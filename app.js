@@ -9,38 +9,49 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const isIos = /iphone|ipad|ipod/i.test(navigator.userAgent);
     const isStandalone = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
-    let printRequestHandled = false;
 
-    function getExternalPrintUrl(laudoId) {
-        const url = new URL('https://laudo-a366a.firebaseapp.com/');
-        url.searchParams.set('printLaudo', laudoId);
-        return url.toString();
-    }
+    async function openGeneratedPdf(targetWindow, reportNumber) {
+        if (typeof window.html2canvas !== 'function' || !window.jspdf?.jsPDF) {
+            targetWindow?.close();
+            throw new Error('O gerador de PDF não foi carregado. Verifique a conexão e tente novamente.');
+        }
 
-    async function processExternalPrintRequest(user) {
-        const laudoId = new URLSearchParams(window.location.search).get('printLaudo');
-        if (!laudoId || !user || printRequestHandled || !window.dbFirebase) return;
-        printRequestHandled = true;
+        const originalTransform = sheet.style.transform;
+        const originalTransformOrigin = sheet.style.transformOrigin;
+        sheet.style.transform = 'none';
+        sheet.style.transformOrigin = 'top left';
 
         try {
-            const snapshot = await window.dbFirebase.collection('laudos').doc(laudoId).get();
-            if (!snapshot.exists) throw new Error('Laudo não encontrado no servidor.');
-            const laudo = { ...snapshot.data(), id: snapshot.id };
-            if (!laudo.formData) throw new Error('Este laudo não possui dados para impressão.');
+            const canvas = await window.html2canvas(sheet, {
+                scale: 2,
+                backgroundColor: '#ffffff',
+                useCORS: true,
+                logging: false,
+                width: sheet.scrollWidth,
+                height: sheet.scrollHeight,
+                windowWidth: sheet.scrollWidth,
+                windowHeight: sheet.scrollHeight
+            });
+            const { jsPDF } = window.jspdf;
+            const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4', compress: true });
+            pdf.addImage(canvas.toDataURL('image/jpeg', 0.94), 'JPEG', 0, 0, 210, 297, undefined, 'FAST');
+            const pdfUrl = URL.createObjectURL(pdf.output('blob'));
+            const safeNumber = String(reportNumber || 'laudo').replace(/[^a-z0-9._-]+/gi, '_');
 
-            await loadFormState(laudo.formData);
-            currentEditingLaudoId = laudo.id;
-            updatePreview();
-            closeModal('modal-login');
-
-            const cleanUrl = new URL(window.location.href);
-            cleanUrl.searchParams.delete('printLaudo');
-            window.history.replaceState({}, document.title, cleanUrl.toString());
-
-            setTimeout(() => window.print(), 500);
-        } catch (error) {
-            printRequestHandled = false;
-            showToast('Não foi possível abrir o laudo para PDF: ' + (error.message || ''), 'error');
+            if (targetWindow) {
+                targetWindow.location.replace(pdfUrl);
+            } else {
+                const link = document.createElement('a');
+                link.href = pdfUrl;
+                link.download = `Laudo_${safeNumber}.pdf`;
+                document.body.appendChild(link);
+                link.click();
+                link.remove();
+            }
+            setTimeout(() => URL.revokeObjectURL(pdfUrl), 300000);
+        } finally {
+            sheet.style.transform = originalTransform;
+            sheet.style.transformOrigin = originalTransformOrigin;
         }
     }
 
@@ -583,14 +594,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (isStandalone) {
             if (!printWindow) {
-                showToast('O celular bloqueou a janela do PDF. Permita pop-ups para este aplicativo e tente novamente.', 'error');
+                showToast('O PDF será baixado porque o celular bloqueou a janela de visualização.', 'info');
+            }
+            try {
+                await openGeneratedPdf(printWindow, laudoRecord.relatorio_num);
+            } catch (error) {
+                showToast(error.message || 'Não foi possível gerar o PDF.', 'error');
+            } finally {
                 zoomLevel = originalZoom;
                 updateZoom();
-                return;
             }
-            printWindow.location.href = getExternalPrintUrl(laudoRecord.id);
-            zoomLevel = originalZoom;
-            updateZoom();
             return;
         }
 
@@ -1792,11 +1805,11 @@ document.addEventListener('DOMContentLoaded', () => {
             await loadFormState(found.formData);
             closeModal('modal-laudos');
             if (isStandalone) {
-                if (!printWindow) {
-                    showToast('O celular bloqueou a janela do PDF. Permita pop-ups e tente novamente.', 'error');
-                    return;
+                try {
+                    await openGeneratedPdf(printWindow, found.relatorio_num);
+                } catch (error) {
+                    showToast(error.message || 'Não foi possível gerar o PDF.', 'error');
                 }
-                printWindow.location.href = getExternalPrintUrl(found.id);
                 return;
             }
             setTimeout(() => window.print(), 300);
@@ -2154,7 +2167,6 @@ document.addEventListener('DOMContentLoaded', () => {
         loadFromLocalStorage();
         if (user.mustChangePassword) openModal('modal-change-password');
         await FirebaseSync.syncPendingForUser(user);
-        await processExternalPrintRequest(user);
     });
 
     window.addEventListener('firebase-data-synced', () => {
