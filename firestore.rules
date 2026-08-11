@@ -80,7 +80,11 @@ service cloud.firestore {
       allow create: if active() &&
         request.resource.data.authorId == request.auth.uid &&
         exists(/databases/$(database)/documents/laudos/$(laudoId)) &&
-        get(/databases/$(database)/documents/laudos/$(laudoId)).data.authorId == request.auth.uid;
+        (
+          admin() ||
+          get(/databases/$(database)/documents/laudos/$(laudoId)).data.authorId == request.auth.uid ||
+          get(/databases/$(database)/documents/laudos/$(laudoId)).data.coordinatorId == request.auth.uid
+        );
       allow update: if admin() ||
         (active() && resource.data.authorId == request.auth.uid &&
           request.resource.data.get('authorId', resource.data.authorId) == resource.data.authorId);
