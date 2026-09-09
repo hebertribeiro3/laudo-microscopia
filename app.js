@@ -661,12 +661,12 @@ document.addEventListener('DOMContentLoaded', () => {
         inputMicrorganismo.value = "Bacillus amyloliquefaciens";
 
         setRadioValue('meio_cultura', 'BAC');
-        setRadioValue('tipo_compressor', 'Odontológico');
+        setRadioValue('tipo_compressor', 'Radial');
 
         document.getElementById('lote_produto').value = "LT-2025-019";
         document.getElementById('lote_meio').value = "LM-884";
         document.getElementById('temperatura').value = "28";
-        document.getElementById('ph').value = "6.8";
+        document.getElementById('ph').value = "5.5";
 
         const today = new Date();
         const yesterday = new Date(today);
@@ -677,8 +677,8 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('data_coleta').value = yesterdayStr;
         
         const currentUser = AuthManager.getCurrentUser();
-        inputColeta.value = currentUser ? currentUser.name : "João Silva";
-        inputAnalise.value = currentUser ? currentUser.name : "João Silva";
+        inputColeta.value = currentUser?.name || "";
+        inputAnalise.value = currentUser?.name || "";
 
         document.getElementById('observacoes').value = DEFAULT_OBSERVACAO_TEXT;
 
@@ -693,20 +693,21 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('coloracao_gram').value = "Bastonetes gram-positivos com presença de endósporos viáveis";
 
         setRadioValue('resultado_qualitativo', 'EXCELENTE');
-        setRadioValue('outros_microrganismos', 'PRESENTE');
+        setRadioValue('outros_microrganismos', 'AUSENTE');
 
-        // Set demo images
-        imgPreview40x.src = "media_extracted/image1.jpeg";
-        imgPreview40x.style.display = 'block';
-        placeholder40x.style.display = 'none';
-        dropzone40x.querySelector('.file-name').textContent = "image1.jpeg (Exemplo)";
-        base64Image40x = "media_extracted/image1.jpeg";
-
-        imgPreview100x.src = "media_extracted/image2.jpeg";
-        imgPreview100x.style.display = 'block';
-        placeholder100x.style.display = 'none';
-        dropzone100x.querySelector('.file-name').textContent = "image2.jpeg (Exemplo)";
-        base64Image100x = "media_extracted/image2.jpeg";
+        // O exemplo começa sem fotos para não reutilizar arquivos locais ou antigos.
+        base64Image40x = "";
+        base64Image100x = "";
+        imgPreview40x.src = "";
+        imgPreview40x.style.display = 'none';
+        placeholder40x.style.display = 'block';
+        dropzone40x.querySelector('.file-name').textContent = "Nenhuma foto selecionada";
+        imgPreview100x.src = "";
+        imgPreview100x.style.display = 'none';
+        placeholder100x.style.display = 'block';
+        dropzone100x.querySelector('.file-name').textContent = "Nenhuma foto selecionada";
+        if (file40x) file40x.value = '';
+        if (file100x) file100x.value = '';
         
         updatePreview();
         showToast('Dados de exemplo carregados!', 'success');
