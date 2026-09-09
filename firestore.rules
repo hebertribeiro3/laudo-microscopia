@@ -25,11 +25,16 @@ service cloud.firestore {
       return active() && profile().role == 'coordenador';
     }
 
+    function assignedTo(data) {
+      return data.get('coordinatorId', null) == request.auth.uid ||
+        data.get('coordinatorIds', []).hasAny([request.auth.uid]);
+    }
+
     match /users/{userId} {
       allow read: if signedIn() && (
         request.auth.uid == userId ||
         admin() ||
-        (coordinator() && resource.data.coordinatorId == request.auth.uid)
+        (coordinator() && assignedTo(resource.data))
       );
 
       allow create: if admin();
@@ -39,6 +44,7 @@ service cloud.firestore {
         request.resource.data.role == resource.data.role &&
         request.resource.data.get('isAdmin', false) == resource.data.get('isAdmin', false) &&
         request.resource.data.get('coordinatorId', null) == resource.data.get('coordinatorId', null) &&
+        request.resource.data.get('coordinatorIds', []) == resource.data.get('coordinatorIds', []) &&
         request.resource.data.get('active', true) == resource.data.get('active', true)
       );
 
@@ -48,13 +54,14 @@ service cloud.firestore {
     match /laudos/{laudoId} {
       allow read: if admin() ||
         (active() && resource.data.authorId == request.auth.uid) ||
-        (coordinator() && resource.data.coordinatorId == request.auth.uid);
+        (coordinator() && assignedTo(resource.data));
 
       allow create: if active() &&
         request.resource.data.authorId == request.auth.uid &&
-        ((profile().role == 'coordenador' && request.resource.data.coordinatorId == request.auth.uid) ||
+        ((profile().role == 'coordenador' && assignedTo(request.resource.data)) ||
          (profile().role == 'consultor' &&
-          request.resource.data.get('coordinatorId', null) == profile().get('coordinatorId', null))) &&
+          request.resource.data.get('coordinatorId', null) == profile().get('coordinatorId', null) &&
+          request.resource.data.get('coordinatorIds', []) == profile().get('coordinatorIds', []))) &&
         !('deletedAt' in request.resource.data);
 
       allow update: if admin() ||
@@ -62,8 +69,9 @@ service cloud.firestore {
           !('deletedAt' in resource.data) &&
           request.resource.data.authorId == resource.data.authorId &&
           request.resource.data.coordinatorId == resource.data.coordinatorId &&
+          request.resource.data.get('coordinatorIds', []) == resource.data.get('coordinatorIds', []) &&
           request.resource.data.createdAt == resource.data.createdAt) ||
-        (coordinator() && resource.data.coordinatorId == request.auth.uid &&
+        (coordinator() && assignedTo(resource.data) &&
           request.resource.data.diff(resource.data).affectedKeys().hasOnly([
             'deletedAt', 'deletedBy', 'deletedByName', 'updatedAt', 'updatedBy'
           ]) && request.resource.data.deletedAt != null);
@@ -74,8 +82,7 @@ service cloud.firestore {
     match /laudos/{laudoId}/images/{imageId} {
       allow read: if admin() ||
         (active() && resource.data.authorId == request.auth.uid) ||
-        (coordinator() &&
-          get(/databases/$(database)/documents/laudos/$(laudoId)).data.coordinatorId == request.auth.uid);
+        (coordinator() && assignedTo(get(/databases/$(database)/documents/laudos/$(laudoId)).data));
 
       allow create: if active() &&
         request.resource.data.authorId == request.auth.uid &&
@@ -83,7 +90,7 @@ service cloud.firestore {
         (
           admin() ||
           get(/databases/$(database)/documents/laudos/$(laudoId)).data.authorId == request.auth.uid ||
-          get(/databases/$(database)/documents/laudos/$(laudoId)).data.coordinatorId == request.auth.uid
+          assignedTo(get(/databases/$(database)/documents/laudos/$(laudoId)).data)
         );
       allow update: if admin() ||
         (active() && resource.data.authorId == request.auth.uid &&

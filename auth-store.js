@@ -104,11 +104,12 @@ const LaudoDB = (function () {
                         const snapshot = await dbFirebase.collection('users').get();
                         docs = snapshot.docs;
                     } else if (current?.role === 'coordenador') {
-                        const [selfDoc, teamSnapshot] = await Promise.all([
+                        const [selfDoc, teamSnapshot, legacyTeamSnapshot] = await Promise.all([
                             dbFirebase.collection('users').doc(current.id).get(),
+                            dbFirebase.collection('users').where('coordinatorIds', 'array-contains', current.id).get(),
                             dbFirebase.collection('users').where('coordinatorId', '==', current.id).get()
                         ]);
-                        docs = [...teamSnapshot.docs];
+                        docs = [...teamSnapshot.docs, ...legacyTeamSnapshot.docs];
                         if (selfDoc.exists) docs.push(selfDoc);
                     } else if (current?.id) {
                         const selfDoc = await dbFirebase.collection('users').doc(current.id).get();
@@ -292,9 +293,11 @@ const FirebaseSync = (function () {
             listen(dbFirebase.collection('laudos'), 'laudos', () => true);
             listen(dbFirebase.collection('clients'), 'clients', () => true);
         } else if (user.role === 'coordenador') {
-            listen(dbFirebase.collection('users').where('coordinatorId', '==', user.id), 'users', item => item.coordinatorId === user.id);
+            listen(dbFirebase.collection('users').where('coordinatorIds', 'array-contains', user.id), 'users', item => Array.isArray(item.coordinatorIds) && item.coordinatorIds.includes(user.id));
+            listen(dbFirebase.collection('users').where('coordinatorId', '==', user.id), 'users', item => !Array.isArray(item.coordinatorIds) && item.coordinatorId === user.id);
             listen(dbFirebase.collection('users').where(firebase.firestore.FieldPath.documentId(), '==', user.id), 'users', item => item.id === user.id);
-            listen(dbFirebase.collection('laudos').where('coordinatorId', '==', user.id), 'laudos', item => item.coordinatorId === user.id);
+            listen(dbFirebase.collection('laudos').where('coordinatorIds', 'array-contains', user.id), 'laudos', item => Array.isArray(item.coordinatorIds) && item.coordinatorIds.includes(user.id));
+            listen(dbFirebase.collection('laudos').where('coordinatorId', '==', user.id), 'laudos', item => !Array.isArray(item.coordinatorIds) && item.coordinatorId === user.id);
             listen(dbFirebase.collection('laudos').where('authorId', '==', user.id), 'laudos', item => item.authorId === user.id);
             listen(dbFirebase.collection('clients').where('userId', '==', user.id), 'clients', item => item.userId === user.id);
         } else {
@@ -528,7 +531,8 @@ const AuthManager = (function () {
             if (!laudo || !user) return false;
             if (user.isAdmin === true || user.role === 'admin') return true;
             if (laudo.authorId === user.id) return true;
-            return user.role === 'coordenador' && laudo.coordinatorId === user.id;
+            const coordinatorIds = Array.isArray(laudo.coordinatorIds) ? laudo.coordinatorIds : (laudo.coordinatorId ? [laudo.coordinatorId] : []);
+            return user.role === 'coordenador' && coordinatorIds.includes(user.id);
         },
         canEditLaudo: (laudo, user = currentUser) => {
             if (!laudo || !user || laudo.deletedAt) return false;
@@ -712,10 +716,16 @@ const AuthManager = (function () {
             if (user.role === 'coordenador') {
                 const allUsers = await LaudoDB.getUsers();
                 const teamIds = allUsers
-                    .filter(u => (u.role === 'consultor' || AuthManager.isAdmin(u)) && userIds.includes(u.coordinatorId))
+                    .filter(u => {
+                        const coordinatorIds = Array.isArray(u.coordinatorIds) ? u.coordinatorIds : (u.coordinatorId ? [u.coordinatorId] : []);
+                        return (u.role === 'consultor' || AuthManager.isAdmin(u)) && coordinatorIds.some(id => userIds.includes(id));
+                    })
                     .map(u => u.id);
 
-                return active.filter(l => userIds.includes(l.authorId) || teamIds.includes(l.authorId) || userIds.includes(l.coordinatorId));
+                return active.filter(l => {
+                    const coordinatorIds = Array.isArray(l.coordinatorIds) ? l.coordinatorIds : (l.coordinatorId ? [l.coordinatorId] : []);
+                    return userIds.includes(l.authorId) || teamIds.includes(l.authorId) || coordinatorIds.some(id => userIds.includes(id));
+                });
             }
 
             if (user.role === 'consultor') {
@@ -736,7 +746,10 @@ const AuthManager = (function () {
             }
 
             if (currentUser.role === 'coordenador') {
-                return users.filter(u => userIds.includes(u.id) || (u.role === 'consultor' && userIds.includes(u.coordinatorId)));
+                return users.filter(u => {
+                    const coordinatorIds = Array.isArray(u.coordinatorIds) ? u.coordinatorIds : (u.coordinatorId ? [u.coordinatorId] : []);
+                    return userIds.includes(u.id) || (u.role === 'consultor' && coordinatorIds.some(id => userIds.includes(id)));
+                });
             }
 
             if (currentUser.role === 'consultor') {

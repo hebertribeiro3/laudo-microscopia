@@ -1,4 +1,20 @@
 document.addEventListener('DOMContentLoaded', () => {
+    function getCoordinatorIds(record) {
+        if (!record) return [];
+        const ids = Array.isArray(record.coordinatorIds)
+            ? record.coordinatorIds
+            : (record.coordinatorId ? [record.coordinatorId] : []);
+        return [...new Set(ids.filter(Boolean))];
+    }
+
+    function setSelectedCoordinatorIds(select, ids) {
+        if (!select) return;
+        const selected = new Set(ids);
+        Array.from(select.options).forEach(option => {
+            option.selected = selected.has(option.value);
+        });
+    }
+
     // Remove instalações/cache do PWA descontinuado. O site volta a operar
     // exclusivamente como página web comum, sempre carregando a versão atual.
     if ('serviceWorker' in navigator) {
@@ -909,20 +925,22 @@ document.addEventListener('DOMContentLoaded', () => {
         const existingLaudos = currentEditingLaudoId ? await LaudoDB.getLaudos() : [];
         const existing = existingLaudos.find(l => l.id === currentEditingLaudoId) || null;
         const createdAt = existing?.createdAt || new Date().toISOString();
-        const coordinatorId = existing?.coordinatorId || user.coordinatorId || (user.role === 'coordenador' ? user.id : null);
+        const coordinatorIds = existing
+            ? getCoordinatorIds(existing)
+            : (user.role === 'coordenador' ? [user.id] : getCoordinatorIds(user));
+        const coordinatorId = coordinatorIds[0] || null;
 
         if (existing && !AuthManager.canEditLaudo(existing, user)) {
             showToast('Você pode visualizar este laudo, mas somente o autor pode editá-lo.', 'error');
             return null;
         }
 
-        let coordName = null;
-        if (user.role === 'consultor' && user.coordinatorId) {
+        let coordinatorNames = [];
+        if (user.role === 'consultor' && coordinatorIds.length) {
             const users = await LaudoDB.getUsers();
-            const coordIds = [user.coordinatorId];
-            if (user.previousId) coordIds.push(user.previousId);
-            const coord = users.find(u => coordIds.includes(u.id) || coordIds.includes(u.previousId));
-            if (coord) coordName = coord.name;
+            coordinatorNames = users
+                .filter(candidate => coordinatorIds.includes(candidate.id) || coordinatorIds.includes(candidate.previousId))
+                .map(candidate => candidate.name);
         }
 
         try {
@@ -944,7 +962,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     authorName: existing?.authorName || user.name,
                     authorRole: existing?.authorRole || user.role,
                     coordinatorId,
-                    coordinatorName: existing?.coordinatorName || coordName || (user.role === 'coordenador' ? user.name : null),
+                    coordinatorIds,
+                    coordinatorName: existing?.coordinatorName || coordinatorNames[0] || (user.role === 'coordenador' ? user.name : null),
+                    coordinatorNames: existing?.coordinatorNames || coordinatorNames || (user.role === 'coordenador' ? [user.name] : []),
                     createdAt,
                     createdBy: existing?.createdBy || user.id,
                     updatedAt: new Date().toISOString(),
@@ -980,7 +1000,9 @@ document.addEventListener('DOMContentLoaded', () => {
             authorName: existing?.authorName || user.name,
             authorRole: existing?.authorRole || user.role,
             coordinatorId,
-            coordinatorName: existing?.coordinatorName || coordName || (user.role === 'coordenador' ? user.name : null),
+            coordinatorIds,
+            coordinatorName: existing?.coordinatorName || coordinatorNames[0] || (user.role === 'coordenador' ? user.name : null),
+            coordinatorNames: existing?.coordinatorNames || coordinatorNames || (user.role === 'coordenador' ? [user.name] : []),
             createdAt,
             createdBy: existing?.createdBy || user.id,
             updatedAt: new Date().toISOString(),
@@ -1765,8 +1787,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // Populate Coordinators select box
         if (coordSelect) {
             const coords = users.filter(u => u.role === 'coordenador');
-            coordSelect.innerHTML = '<option value="">Nenhum (Independente)</option>' +
-                coords.map(c => `<option value="${escapeHTML(c.id)}">${escapeHTML(c.name)}</option>`).join('');
+            coordSelect.innerHTML = coords.map(c => `<option value="${escapeHTML(c.id)}">${escapeHTML(c.name)}</option>`).join('');
         }
 
         tbody.innerHTML = users.filter(u => u.active !== false).map(u => {
@@ -1780,11 +1801,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 roleLabel = 'Coordenador';
             }
 
-            let coordName = '-';
-            if (u.coordinatorId) {
-                const c = users.find(x => x.id === u.coordinatorId);
-                if (c) coordName = escapeHTML(c.name);
-            }
+            const coordNames = getCoordinatorIds(u)
+                .map(id => users.find(candidate => candidate.id === id)?.name)
+                .filter(Boolean)
+                .map(escapeHTML);
+            const coordName = coordNames.length ? coordNames.join(', ') : '-';
 
             return `
                 <tr>
@@ -1824,7 +1845,7 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('user-input-pass').required = false;
         document.getElementById('user-input-role').value = AuthManager.isAdmin(found) ? 'admin' : found.role;
         document.getElementById('user-input-role').disabled = found.id === AuthManager.getCurrentUser()?.id && AuthManager.isAdmin(found);
-        document.getElementById('user-input-coord').value = found.coordinatorId || '';
+        setSelectedCoordinatorIds(document.getElementById('user-input-coord'), getCoordinatorIds(found));
 
         toggleGroupCoordSelect();
         document.getElementById('form-user-edit').classList.remove('hidden');
@@ -1845,13 +1866,31 @@ document.addEventListener('DOMContentLoaded', () => {
     const formUserEdit = document.getElementById('form-user-edit');
     const roleSelect = document.getElementById('user-input-role');
 
+    async function updateConsultantReportsCoordinators(userId, coordinatorIds, coordinatorNames) {
+        const db = window.dbFirebase;
+        if (!db || !userId) return;
+        const snapshot = await db.collection('laudos').where('authorId', '==', userId).get();
+        for (let offset = 0; offset < snapshot.docs.length; offset += 450) {
+            const batch = db.batch();
+            snapshot.docs.slice(offset, offset + 450).forEach(doc => {
+                batch.update(doc.ref, {
+                    coordinatorId: coordinatorIds[0] || null,
+                    coordinatorIds,
+                    coordinatorName: coordinatorNames[0] || null,
+                    coordinatorNames,
+                    updatedAt: new Date().toISOString()
+                });
+            });
+            await batch.commit();
+        }
+    }
+
     async function populateCoordSelect() {
         const select = document.getElementById('user-input-coord');
         if (!select) return;
         const users = await LaudoDB.getUsers();
         const coords = users.filter(u => u.role === 'coordenador');
-        select.innerHTML = '<option value="">Nenhum (Independente)</option>' +
-            coords.map(c => `<option value="${escapeHTML(c.id)}">${escapeHTML(c.name)}</option>`).join('');
+        select.innerHTML = coords.map(c => `<option value="${escapeHTML(c.id)}">${escapeHTML(c.name)}</option>`).join('');
     }
 
     function toggleGroupCoordSelect() {
@@ -1876,7 +1915,7 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('user-input-pass').required = true;
         document.getElementById('user-input-role').value = 'consultor';
         document.getElementById('user-input-role').disabled = false;
-        document.getElementById('user-input-coord').value = '';
+        setSelectedCoordinatorIds(document.getElementById('user-input-coord'), []);
         toggleGroupCoordSelect();
         document.getElementById('form-user-edit').classList.remove('hidden');
     });
@@ -1896,7 +1935,15 @@ document.addEventListener('DOMContentLoaded', () => {
             const editingSelfAsAdmin = editId === AuthManager.getCurrentUser()?.id && AuthManager.isAdmin();
             const role = (selectedRole === 'admin' || editingSelfAsAdmin) ? 'consultor' : selectedRole;
             const isAdmin = selectedRole === 'admin' || editingSelfAsAdmin;
-            const coordId = document.getElementById('user-input-coord').value || null;
+            const coordSelect = document.getElementById('user-input-coord');
+            const coordIds = role === 'consultor'
+                ? Array.from(coordSelect.selectedOptions).map(option => option.value).filter(Boolean)
+                : [];
+            const coordId = coordIds[0] || null;
+            const allUsers = await LaudoDB.getUsers();
+            const coordNames = coordIds
+                .map(id => allUsers.find(candidate => candidate.id === id)?.name)
+                .filter(Boolean);
 
             if (editId) {
                 const userData = {
@@ -1904,12 +1951,14 @@ document.addEventListener('DOMContentLoaded', () => {
                     email,
                     role,
                     isAdmin,
-                    coordinatorId: role === 'consultor' ? coordId : null
+                    coordinatorId: coordId,
+                    coordinatorIds: coordIds
                 };
                 const dbFirebase = window.dbFirebase;
                 if (dbFirebase) {
                     try {
                         await dbFirebase.collection('users').doc(editId).set(userData, { merge: true });
+                        await updateConsultantReportsCoordinators(editId, coordIds, coordNames);
                     } catch (err) {
                         showToast('Erro ao salvar no Firestore: ' + err.message, 'error');
                         return;
@@ -1925,7 +1974,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     email,
                     role,
                     isAdmin,
-                    coordinatorId: role === 'consultor' ? coordId : null,
+                    coordinatorId: coordId,
+                    coordinatorIds: coordIds,
                     mustChangePassword: true,
                     active: true
                 }, pass);
@@ -1956,15 +2006,15 @@ document.addEventListener('DOMContentLoaded', () => {
         if (currentUser.previousId) userIds.push(currentUser.previousId);
 
         const allUsers = await LaudoDB.getUsers();
-        let team = allUsers.filter(u => u.role === 'consultor' && userIds.includes(u.coordinatorId));
+        let team = allUsers.filter(u => u.role === 'consultor' && getCoordinatorIds(u).some(id => userIds.includes(id)));
         const laudos = await LaudoDB.getLaudos();
 
         if (team.length === 0 && db) {
             const validIds = allUsers.map(u => u.id);
             const orphans = allUsers.filter(u =>
                 u.role === 'consultor' &&
-                u.coordinatorId &&
-                !validIds.includes(u.coordinatorId)
+                getCoordinatorIds(u).length > 0 &&
+                getCoordinatorIds(u).every(id => !validIds.includes(id))
             );
             if (orphans.length > 0) {
                 tbody.innerHTML = `
@@ -1980,7 +2030,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 document.getElementById('btn-claim-orphans')?.addEventListener('click', async () => {
                     for (const o of orphans) {
                         try {
-                            await db.collection('users').doc(o.id).update({ coordinatorId: currentUser.id });
+                            await db.collection('users').doc(o.id).update({
+                                coordinatorId: currentUser.id,
+                                coordinatorIds: [currentUser.id]
+                            });
                         } catch (e) {
                             console.warn('[Team] Erro ao vincular:', o.id, e);
                         }

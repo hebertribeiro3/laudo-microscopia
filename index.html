@@ -761,7 +761,7 @@
             <div class="modal-body">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
                     <p style="font-size: 13px; color: var(--text-secondary); margin: 0;">
-                        Cadastre, edite e vincule consultores aos seus respectivos coordenadores.
+                        Cadastre, edite e vincule consultores a um ou mais coordenadores.
                     </p>
                     <button type="button" class="btn-primary" id="btn-show-add-user">
                         <i class="fa-solid fa-user-plus"></i> Novo Usuário
@@ -799,10 +799,9 @@
                             </select>
                         </div>
                         <div class="form-group col-4" id="group-coord-select">
-                            <label for="user-input-coord">Coordenador Responsável</label>
-                            <select id="user-input-coord">
-                                <option value="">Nenhum (Independente)</option>
-                            </select>
+                            <label for="user-input-coord">Coordenadores Responsáveis</label>
+                            <select id="user-input-coord" multiple size="3" aria-describedby="user-coord-help"></select>
+                            <small id="user-coord-help" class="form-help">Selecione um ou mais coordenadores. Use Ctrl ou Command para selecionar vários.</small>
                         </div>
                     </div>
                     <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 12px;">
@@ -819,7 +818,7 @@
                                 <th>Nome</th>
                                 <th>E-mail</th>
                                 <th>Função</th>
-                                <th>Coordenador Direto</th>
+                                <th>Coordenadores</th>
                                 <th style="text-align: right;">Ações</th>
                             </tr>
                         </thead>
@@ -1023,7 +1022,7 @@
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
 
     <!-- Scripts da Aplicação -->
-    <script src="auth-store.js?v=4"></script>
-    <script src="app.js?v=15"></script>
+    <script src="auth-store.js?v=5"></script>
+    <script src="app.js?v=16"></script>
 </body>
 </html>
