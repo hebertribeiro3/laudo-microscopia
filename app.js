@@ -1000,9 +1000,11 @@ document.addEventListener('DOMContentLoaded', () => {
         const existing = existingLaudos.find(l => l.id === currentEditingLaudoId) || null;
         const createdAt = existing?.createdAt || new Date().toISOString();
         const coordinatorIds = existing
-            ? getCoordinatorIds(existing)
-            : (user.role === 'coordenador' ? [user.id] : getCoordinatorIds(user));
-        const coordinatorId = coordinatorIds[0] || null;
+            ? (Array.isArray(existing.coordinatorIds) ? existing.coordinatorIds : [])
+            : (user.role === 'coordenador'
+                ? [user.id]
+                : (Array.isArray(user.coordinatorIds) ? user.coordinatorIds : []));
+        const coordinatorId = coordinatorIds[0] || existing?.coordinatorId || user.coordinatorId || null;
 
         if (existing && !AuthManager.canEditLaudo(existing, user)) {
             showToast('Você pode visualizar este laudo, mas somente o autor pode editá-lo.', 'error');

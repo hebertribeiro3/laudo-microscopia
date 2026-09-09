@@ -334,8 +334,12 @@ const FirebaseSync = (function () {
         const remoteData = laudoSnapshot.data() || {};
         if (!remoteData.deletedAt) {
             if (localLaudo?.deletedAt) {
-                await LaudoDB.removeLocal('laudos', id);
-                return { alreadyAbsent: true };
+                await LaudoDB.putLocal('laudos', {
+                    ...remoteData,
+                    id: laudoSnapshot.id,
+                    syncStatus: 'synced'
+                });
+                throw new Error('Este laudo foi restaurado em outro aparelho e não está mais na lixeira. A lista foi atualizada.');
             }
             throw new Error('O laudo não está mais na lixeira. Atualize a lista e tente novamente.');
         }
@@ -386,9 +390,12 @@ const FirebaseSync = (function () {
         if (!source || !source.startsWith('data:image/')) return source || '';
         if (!dbFirebase) throw new Error('Firebase não está disponível para enviar as fotos.');
         const imagesRef = dbFirebase.collection('laudos').doc(laudoId).collection('images');
-        // A consulta precisa declarar o autor para satisfazer as regras do
-        // Firestore. Consultar a subcoleção inteira é recusado para consultores.
-        const existing = await imagesRef.where('authorId', '==', authorId).get();
+        const currentUser = typeof AuthManager !== 'undefined' ? AuthManager.getCurrentUser() : null;
+        let existingQuery = imagesRef.where('type', '==', type);
+        if (!AuthManager.isAdmin(currentUser)) {
+            existingQuery = existingQuery.where('authorId', '==', authorId);
+        }
+        const existing = await existingQuery.get();
         const batch = dbFirebase.batch();
 
         // Mantém cada documento confortavelmente abaixo do limite de 1 MiB do Firestore.
@@ -396,7 +403,7 @@ const FirebaseSync = (function () {
         const total = Math.ceil(source.length / chunkSize);
         const newIds = new Set(Array.from({ length: total }, (_, index) => `${type}_${String(index).padStart(3, '0')}`));
         existing.docs
-            .filter(doc => doc.data().type === type && !newIds.has(doc.id))
+            .filter(doc => !newIds.has(doc.id))
             .forEach(doc => batch.delete(doc.ref));
         for (let index = 0; index < total; index++) {
             const content = source.slice(index * chunkSize, (index + 1) * chunkSize);
@@ -414,9 +421,10 @@ const FirebaseSync = (function () {
         const [, laudoId, type] = match;
         const imagesRef = dbFirebase.collection('laudos').doc(laudoId).collection('images');
         const currentUser = typeof AuthManager !== 'undefined' ? AuthManager.getCurrentUser() : null;
-        const query = currentUser && !AuthManager.isAdmin(currentUser) && currentUser.role === 'consultor'
-            ? imagesRef.where('authorId', '==', currentUser.id)
-            : imagesRef;
+        let query = imagesRef.where('type', '==', type);
+        if (currentUser && !AuthManager.isAdmin(currentUser) && currentUser.role === 'consultor') {
+            query = query.where('authorId', '==', currentUser.id);
+        }
         const snapshot = await query.get();
         return snapshot.docs
             .map(doc => doc.data())
@@ -442,10 +450,10 @@ const FirebaseSync = (function () {
                 delete laudo.syncError;
                 delete laudo.syncStatus;
                 if (laudo.formData.image40x?.startsWith('data:image/') && (AuthManager.isAdmin(user) || laudo.authorId === user.id)) {
-                    laudo.formData.image40x = await uploadLaudoImage(laudo.id, user.id, '40x', laudo.formData.image40x);
+                    laudo.formData.image40x = await uploadLaudoImage(laudo.id, laudo.authorId, '40x', laudo.formData.image40x);
                 }
                 if (laudo.formData.image100x?.startsWith('data:image/') && (AuthManager.isAdmin(user) || laudo.authorId === user.id)) {
-                    laudo.formData.image100x = await uploadLaudoImage(laudo.id, user.id, '100x', laudo.formData.image100x);
+                    laudo.formData.image100x = await uploadLaudoImage(laudo.id, laudo.authorId, '100x', laudo.formData.image100x);
                 }
                 await pushItem('laudos', laudo);
                 await LaudoDB.putLocal('laudos', { ...laudo, syncStatus: 'synced' });

@@ -85,12 +85,12 @@ service cloud.firestore {
         (coordinator() && assignedTo(get(/databases/$(database)/documents/laudos/$(laudoId)).data));
 
       allow create: if active() &&
-        request.resource.data.authorId == request.auth.uid &&
         exists(/databases/$(database)/documents/laudos/$(laudoId)) &&
+        request.resource.data.authorId ==
+          get(/databases/$(database)/documents/laudos/$(laudoId)).data.authorId &&
         (
           admin() ||
-          get(/databases/$(database)/documents/laudos/$(laudoId)).data.authorId == request.auth.uid ||
-          assignedTo(get(/databases/$(database)/documents/laudos/$(laudoId)).data)
+          get(/databases/$(database)/documents/laudos/$(laudoId)).data.authorId == request.auth.uid
         );
       allow update: if admin() ||
         (active() && resource.data.authorId == request.auth.uid &&
