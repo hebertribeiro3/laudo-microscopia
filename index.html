@@ -793,13 +793,16 @@
                         <div class="form-group col-6">
                             <label for="user-input-role">Função / Nível</label>
                             <select id="user-input-role" required>
-                                <option value="consultor">Consultor</option>
-                                <option value="coordenador">Coordenador</option>
-                                <option value="admin">Consultor + Admin</option>
+                                <option value="consultor_m">Consultor</option>
+                                <option value="consultor_f">Consultora</option>
+                                <option value="coordenador_m">Coordenador</option>
+                                <option value="coordenador_f">Coordenadora</option>
+                                <option value="admin_m">Consultor + Admin</option>
+                                <option value="admin_f">Consultora + Admin</option>
                             </select>
                         </div>
                         <div class="form-group col-12" id="group-coord-select">
-                            <label for="user-input-coord">Coordenadores Responsáveis</label>
+                            <label for="user-input-coord">Coordenadores(as) Responsáveis</label>
                             <div class="coordinator-picker" id="coordinator-picker">
                                 <button type="button" class="coordinator-picker-trigger" id="coordinator-picker-trigger" aria-expanded="false" aria-controls="coordinator-picker-panel">
                                     <span class="coordinator-picker-summary" id="coordinator-picker-summary">Nenhum coordenador selecionado</span>
@@ -811,7 +814,7 @@
                                 </div>
                             </div>
                             <select id="user-input-coord" class="coordinator-native-select" multiple aria-hidden="true" tabindex="-1"></select>
-                            <small id="user-coord-help" class="form-help">Marque todos os coordenadores responsáveis.</small>
+                            <small id="user-coord-help" class="form-help">Marque todos os coordenadores e coordenadoras responsáveis.</small>
                         </div>
                     </div>
                     <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 12px;">
@@ -849,19 +852,19 @@
         <div class="modal-card modal-lg">
             <div class="modal-header">
                 <div class="modal-title">
-                    <i class="fa-solid fa-users"></i> Minha Equipe de Consultores
+                    <i class="fa-solid fa-users"></i> Minha Equipe de Consultores(as)
                 </div>
                 <button type="button" class="modal-close" data-close="modal-equipe">&times;</button>
             </div>
             <div class="modal-body">
                 <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 16px;">
-                    Abaixo estão listados todos os consultores sob sua supervisão e coordenação.
+                    Abaixo estão listados todos os consultores e consultoras sob sua supervisão e coordenação.
                 </p>
                 <div style="overflow-x: auto;">
                     <table class="app-table">
                         <thead>
                             <tr>
-                                <th>Consultor</th>
+                                <th>Consultor(a)</th>
                                 <th>E-mail</th>
                                 <th style="text-align: center;">Laudos Gerados</th>
                                 <th style="text-align: right;">Ação</th>
@@ -1033,6 +1036,6 @@
 
     <!-- Scripts da Aplicação -->
     <script src="auth-store.js?v=5"></script>
-    <script src="app.js?v=17"></script>
+    <script src="app.js?v=18"></script>
 </body>
 </html>

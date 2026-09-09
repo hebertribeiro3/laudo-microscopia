@@ -7,6 +7,34 @@ document.addEventListener('DOMContentLoaded', () => {
         return [...new Set(ids.filter(Boolean))];
     }
 
+    function getRoleDisplay(user) {
+        if (!user) return 'Consultor';
+        if (user.role === 'coordenador') {
+            return user.roleDisplay === 'coordenadora' ? 'Coordenadora' : 'Coordenador';
+        }
+        return user.roleDisplay === 'consultora' ? 'Consultora' : 'Consultor';
+    }
+
+    function getRoleChoice(user) {
+        const feminine = user?.roleDisplay === 'consultora' || user?.roleDisplay === 'coordenadora';
+        if (AuthManager.isAdmin(user)) return feminine ? 'admin_f' : 'admin_m';
+        if (user?.role === 'coordenador') return feminine ? 'coordenador_f' : 'coordenador_m';
+        return feminine ? 'consultor_f' : 'consultor_m';
+    }
+
+    function parseRoleChoice(choice, preserveAdmin = false) {
+        const feminine = choice?.endsWith('_f');
+        const selectedAdmin = choice?.startsWith('admin_');
+        const coordinator = choice?.startsWith('coordenador_');
+        return {
+            role: coordinator ? 'coordenador' : 'consultor',
+            roleDisplay: coordinator
+                ? (feminine ? 'coordenadora' : 'coordenador')
+                : (feminine ? 'consultora' : 'consultor'),
+            isAdmin: selectedAdmin || preserveAdmin
+        };
+    }
+
     function setSelectedCoordinatorIds(select, ids) {
         if (!select) return;
         const selected = new Set(ids);
@@ -1006,6 +1034,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     authorId: existing?.authorId || user.id,
                     authorName: existing?.authorName || user.name,
                     authorRole: existing?.authorRole || user.role,
+                    authorRoleDisplay: existing?.authorRoleDisplay || user.roleDisplay || user.role,
                     coordinatorId,
                     coordinatorIds,
                     coordinatorName: existing?.coordinatorName || coordinatorNames[0] || (user.role === 'coordenador' ? user.name : null),
@@ -1044,6 +1073,7 @@ document.addEventListener('DOMContentLoaded', () => {
             authorId: existing?.authorId || user.id,
             authorName: existing?.authorName || user.name,
             authorRole: existing?.authorRole || user.role,
+            authorRoleDisplay: existing?.authorRoleDisplay || user.roleDisplay || user.role,
             coordinatorId,
             coordinatorIds,
             coordinatorName: existing?.coordinatorName || coordinatorNames[0] || (user.role === 'coordenador' ? user.name : null),
@@ -1287,16 +1317,16 @@ document.addEventListener('DOMContentLoaded', () => {
         populateClientDropdown();
 
         let roleBadgeClass = 'badge-role-consultor';
-        let roleLabel = 'Consultor';
+        let roleLabel = getRoleDisplay(user);
         let roleIcon = 'fa-microscope';
 
         if (AuthManager.isAdmin(user)) {
             roleBadgeClass = 'badge-role-admin';
-            roleLabel = user.role === 'consultor' ? 'Consultor • Admin' : 'Admin Principal';
+            roleLabel = `${getRoleDisplay(user)} • Admin`;
             roleIcon = 'fa-crown';
         } else if (user.role === 'coordenador') {
             roleBadgeClass = 'badge-role-coordenador';
-            roleLabel = 'Coordenador';
+            roleLabel = getRoleDisplay(user);
             roleIcon = 'fa-user-tie';
         }
 
@@ -1688,18 +1718,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
             tbody.innerHTML = filtered.map(l => {
                 let roleClass = 'badge-role-consultor';
-                let roleLabel = 'Consultor';
+                let roleLabel = l.authorRoleDisplay === 'consultora' ? 'Consultora' : 'Consultor';
                 if (l.authorRole === 'admin') {
                     if (AuthManager.isAdmin(currentUser)) {
                         roleClass = 'badge-role-admin';
                         roleLabel = 'Admin';
                     } else {
                         roleClass = 'badge-role-consultor';
-                        roleLabel = 'Consultor';
+                        roleLabel = l.authorRoleDisplay === 'consultora' ? 'Consultora' : 'Consultor';
                     }
                 } else if (l.authorRole === 'coordenador') {
                     roleClass = 'badge-role-coordenador';
-                    roleLabel = 'Coordenador';
+                    roleLabel = l.authorRoleDisplay === 'coordenadora' ? 'Coordenadora' : 'Coordenador';
                 }
 
                 const formattedDate = l.data_emissao ? formatDate(l.data_emissao) : '-';
@@ -1838,13 +1868,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
         tbody.innerHTML = users.filter(u => u.active !== false).map(u => {
             let roleClass = 'badge-role-consultor';
-            let roleLabel = 'Consultor';
+            let roleLabel = getRoleDisplay(u);
             if (AuthManager.isAdmin(u)) {
                 roleClass = 'badge-role-admin';
-                roleLabel = u.role === 'consultor' ? 'Consultor + Admin' : 'Admin Principal';
+                roleLabel = `${getRoleDisplay(u)} + Admin`;
             } else if (u.role === 'coordenador') {
                 roleClass = 'badge-role-coordenador';
-                roleLabel = 'Coordenador';
+                roleLabel = getRoleDisplay(u);
             }
 
             const coordNames = getCoordinatorIds(u)
@@ -1889,7 +1919,7 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('user-input-pass').value = '';
         document.getElementById('user-input-pass').placeholder = 'Deixe em branco para manter';
         document.getElementById('user-input-pass').required = false;
-        document.getElementById('user-input-role').value = AuthManager.isAdmin(found) ? 'admin' : found.role;
+        document.getElementById('user-input-role').value = getRoleChoice(found);
         document.getElementById('user-input-role').disabled = found.id === AuthManager.getCurrentUser()?.id && AuthManager.isAdmin(found);
         setSelectedCoordinatorIds(document.getElementById('user-input-coord'), getCoordinatorIds(found));
 
@@ -1912,7 +1942,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const formUserEdit = document.getElementById('form-user-edit');
     const roleSelect = document.getElementById('user-input-role');
 
-    async function updateConsultantReportsCoordinators(userId, coordinatorIds, coordinatorNames) {
+    async function updateConsultantReportsProfile(userId, role, roleDisplay, coordinatorIds, coordinatorNames) {
         const db = window.dbFirebase;
         if (!db || !userId) return;
         const snapshot = await db.collection('laudos').where('authorId', '==', userId).get();
@@ -1920,6 +1950,8 @@ document.addEventListener('DOMContentLoaded', () => {
             const batch = db.batch();
             snapshot.docs.slice(offset, offset + 450).forEach(doc => {
                 batch.update(doc.ref, {
+                    authorRole: role,
+                    authorRoleDisplay: roleDisplay,
                     coordinatorId: coordinatorIds[0] || null,
                     coordinatorIds,
                     coordinatorName: coordinatorNames[0] || null,
@@ -1943,7 +1975,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function toggleGroupCoordSelect() {
         const group = document.getElementById('group-coord-select');
         if (group && roleSelect) {
-            group.style.display = (roleSelect.value === 'consultor' || roleSelect.value === 'admin') ? 'block' : 'none';
+            group.style.display = roleSelect.value.startsWith('coordenador_') ? 'none' : 'block';
             if (group.style.display === 'none') {
                 document.getElementById('coordinator-picker-panel')?.classList.add('hidden');
                 document.getElementById('coordinator-picker-trigger')?.setAttribute('aria-expanded', 'false');
@@ -1979,7 +2011,7 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('user-input-pass').value = '';
         document.getElementById('user-input-pass').placeholder = 'Senha temporária (mínimo 8 caracteres)';
         document.getElementById('user-input-pass').required = true;
-        document.getElementById('user-input-role').value = 'consultor';
+        document.getElementById('user-input-role').value = 'consultor_m';
         document.getElementById('user-input-role').disabled = false;
         setSelectedCoordinatorIds(document.getElementById('user-input-coord'), []);
         toggleGroupCoordSelect();
@@ -1999,8 +2031,8 @@ document.addEventListener('DOMContentLoaded', () => {
             const pass = document.getElementById('user-input-pass').value;
             const selectedRole = document.getElementById('user-input-role').value;
             const editingSelfAsAdmin = editId === AuthManager.getCurrentUser()?.id && AuthManager.isAdmin();
-            const role = (selectedRole === 'admin' || editingSelfAsAdmin) ? 'consultor' : selectedRole;
-            const isAdmin = selectedRole === 'admin' || editingSelfAsAdmin;
+            const parsedRole = parseRoleChoice(selectedRole, editingSelfAsAdmin);
+            const { role, roleDisplay, isAdmin } = parsedRole;
             const coordSelect = document.getElementById('user-input-coord');
             const coordIds = role === 'consultor'
                 ? Array.from(coordSelect.selectedOptions).map(option => option.value).filter(Boolean)
@@ -2016,6 +2048,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     name,
                     email,
                     role,
+                    roleDisplay,
                     isAdmin,
                     coordinatorId: coordId,
                     coordinatorIds: coordIds
@@ -2024,7 +2057,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (dbFirebase) {
                     try {
                         await dbFirebase.collection('users').doc(editId).set(userData, { merge: true });
-                        await updateConsultantReportsCoordinators(editId, coordIds, coordNames);
+                        await updateConsultantReportsProfile(editId, role, roleDisplay, coordIds, coordNames);
                     } catch (err) {
                         showToast('Erro ao salvar no Firestore: ' + err.message, 'error');
                         return;
@@ -2039,6 +2072,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     name,
                     email,
                     role,
+                    roleDisplay,
                     isAdmin,
                     coordinatorId: coordId,
                     coordinatorIds: coordIds,
@@ -2086,7 +2120,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 tbody.innerHTML = `
                     <tr>
                         <td colspan="4" style="text-align: center; color: var(--text-muted); padding: 20px;">
-                            <p>Nenhum consultor vinculado, mas encontramos ${orphans.length} consultor(es) com vínculo órfão.</p>
+                            <p>Nenhum membro vinculado, mas encontramos ${orphans.length} consultor(es/as) com vínculo órfão.</p>
                             <button type="button" class="btn-primary" id="btn-claim-orphans" style="padding: 8px 20px; font-size: 13px; margin-top: 8px;">
                                 <i class="fa-solid fa-link"></i> Vincular à minha coordenação
                             </button>
@@ -2104,7 +2138,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             console.warn('[Team] Erro ao vincular:', o.id, e);
                         }
                     }
-                    showToast(`${orphans.length} consultor(es) vinculado(s) à sua coordenação!`, 'success');
+                    showToast(`${orphans.length} consultor(es/as) vinculado(s/as) à sua coordenação!`, 'success');
                     renderTeamView();
                 });
                 return;
@@ -2112,7 +2146,7 @@ document.addEventListener('DOMContentLoaded', () => {
             tbody.innerHTML = `
                 <tr>
                     <td colspan="4" style="text-align: center; color: var(--text-muted); padding: 20px;">
-                        Nenhum consultor vinculado a sua coordenação até o momento.
+                        Nenhum consultor ou consultora vinculado à sua coordenação até o momento.
                     </td>
                 </tr>
             `;
