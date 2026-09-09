@@ -8,7 +8,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css?v=17">
+    <link rel="stylesheet" href="style.css?v=18">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         /* Configuração de Upload */
@@ -781,7 +781,7 @@
                             <label for="user-input-email">E-mail</label>
                             <input type="email" id="user-input-email" required placeholder="roberto@solubio.com">
                         </div>
-                        <div class="form-group col-4">
+                        <div class="form-group col-6">
                             <label for="user-input-pass">Senha</label>
                             <div class="password-input-compact">
                                 <input type="password" id="user-input-pass" required placeholder="Senha temporária (mínimo 8 caracteres)" minlength="8" autocomplete="new-password">
@@ -790,7 +790,7 @@
                                 </button>
                             </div>
                         </div>
-                        <div class="form-group col-4">
+                        <div class="form-group col-6">
                             <label for="user-input-role">Função / Nível</label>
                             <select id="user-input-role" required>
                                 <option value="consultor">Consultor</option>
@@ -798,10 +798,20 @@
                                 <option value="admin">Consultor + Admin</option>
                             </select>
                         </div>
-                        <div class="form-group col-4" id="group-coord-select">
+                        <div class="form-group col-12" id="group-coord-select">
                             <label for="user-input-coord">Coordenadores Responsáveis</label>
-                            <select id="user-input-coord" multiple size="3" aria-describedby="user-coord-help"></select>
-                            <small id="user-coord-help" class="form-help">Selecione um ou mais coordenadores. Use Ctrl ou Command para selecionar vários.</small>
+                            <div class="coordinator-picker" id="coordinator-picker">
+                                <button type="button" class="coordinator-picker-trigger" id="coordinator-picker-trigger" aria-expanded="false" aria-controls="coordinator-picker-panel">
+                                    <span class="coordinator-picker-summary" id="coordinator-picker-summary">Nenhum coordenador selecionado</span>
+                                    <i class="fa-solid fa-chevron-down" aria-hidden="true"></i>
+                                </button>
+                                <div class="coordinator-picker-panel hidden" id="coordinator-picker-panel">
+                                    <div class="coordinator-picker-heading">Quem poderá acessar os laudos?</div>
+                                    <div class="coordinator-picker-options" id="coordinator-picker-options"></div>
+                                </div>
+                            </div>
+                            <select id="user-input-coord" class="coordinator-native-select" multiple aria-hidden="true" tabindex="-1"></select>
+                            <small id="user-coord-help" class="form-help">Marque todos os coordenadores responsáveis.</small>
                         </div>
                     </div>
                     <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 12px;">
@@ -1023,6 +1033,6 @@
 
     <!-- Scripts da Aplicação -->
     <script src="auth-store.js?v=5"></script>
-    <script src="app.js?v=16"></script>
+    <script src="app.js?v=17"></script>
 </body>
 </html>

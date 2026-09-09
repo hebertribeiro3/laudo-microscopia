@@ -13,6 +13,10 @@ document.addEventListener('DOMContentLoaded', () => {
         Array.from(select.options).forEach(option => {
             option.selected = selected.has(option.value);
         });
+        document.querySelectorAll('#coordinator-picker-options input[type="checkbox"]').forEach(input => {
+            input.checked = selected.has(input.value);
+        });
+        updateCoordinatorPickerSummary();
     }
 
     // Remove instalações/cache do PWA descontinuado. O site volta a operar
@@ -129,6 +133,47 @@ document.addEventListener('DOMContentLoaded', () => {
             .replace(/>/g, '&gt;')
             .replace(/"/g, '&quot;')
             .replace(/'/g, '&#039;');
+    }
+
+    function updateCoordinatorPickerSummary() {
+        const select = document.getElementById('user-input-coord');
+        const summary = document.getElementById('coordinator-picker-summary');
+        if (!select || !summary) return;
+        const names = Array.from(select.selectedOptions).map(option => option.textContent.trim());
+        summary.classList.toggle('has-selection', names.length > 0);
+        if (names.length === 0) {
+            summary.textContent = 'Nenhum coordenador selecionado';
+        } else if (names.length <= 2) {
+            summary.textContent = names.join(', ');
+        } else {
+            summary.textContent = `${names[0]}, ${names[1]} +${names.length - 2}`;
+        }
+    }
+
+    function renderCoordinatorPickerOptions(coordinators) {
+        const optionsContainer = document.getElementById('coordinator-picker-options');
+        const select = document.getElementById('user-input-coord');
+        if (!optionsContainer || !select) return;
+        const selected = new Set(Array.from(select.selectedOptions).map(option => option.value));
+        if (!coordinators.length) {
+            optionsContainer.innerHTML = '<div class="coordinator-picker-empty">Nenhum coordenador cadastrado.</div>';
+            updateCoordinatorPickerSummary();
+            return;
+        }
+        optionsContainer.innerHTML = coordinators.map(coordinator => `
+            <label class="coordinator-picker-option">
+                <input type="checkbox" value="${escapeHTML(coordinator.id)}" ${selected.has(coordinator.id) ? 'checked' : ''}>
+                <span>${escapeHTML(coordinator.name)}</span>
+            </label>
+        `).join('');
+        optionsContainer.querySelectorAll('input[type="checkbox"]').forEach(input => {
+            input.addEventListener('change', () => {
+                const option = Array.from(select.options).find(item => item.value === input.value);
+                if (option) option.selected = input.checked;
+                updateCoordinatorPickerSummary();
+            });
+        });
+        updateCoordinatorPickerSummary();
     }
 
     // Set preview text value
@@ -1788,6 +1833,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (coordSelect) {
             const coords = users.filter(u => u.role === 'coordenador');
             coordSelect.innerHTML = coords.map(c => `<option value="${escapeHTML(c.id)}">${escapeHTML(c.name)}</option>`).join('');
+            renderCoordinatorPickerOptions(coords);
         }
 
         tbody.innerHTML = users.filter(u => u.active !== false).map(u => {
@@ -1891,18 +1937,38 @@ document.addEventListener('DOMContentLoaded', () => {
         const users = await LaudoDB.getUsers();
         const coords = users.filter(u => u.role === 'coordenador');
         select.innerHTML = coords.map(c => `<option value="${escapeHTML(c.id)}">${escapeHTML(c.name)}</option>`).join('');
+        renderCoordinatorPickerOptions(coords);
     }
 
     function toggleGroupCoordSelect() {
         const group = document.getElementById('group-coord-select');
         if (group && roleSelect) {
             group.style.display = (roleSelect.value === 'consultor' || roleSelect.value === 'admin') ? 'block' : 'none';
+            if (group.style.display === 'none') {
+                document.getElementById('coordinator-picker-panel')?.classList.add('hidden');
+                document.getElementById('coordinator-picker-trigger')?.setAttribute('aria-expanded', 'false');
+            }
         }
     }
 
     if (roleSelect) {
         roleSelect.addEventListener('change', toggleGroupCoordSelect);
     }
+
+    const coordinatorPicker = document.getElementById('coordinator-picker');
+    const coordinatorPickerTrigger = document.getElementById('coordinator-picker-trigger');
+    const coordinatorPickerPanel = document.getElementById('coordinator-picker-panel');
+    coordinatorPickerTrigger?.addEventListener('click', () => {
+        const willOpen = coordinatorPickerPanel.classList.contains('hidden');
+        coordinatorPickerPanel.classList.toggle('hidden', !willOpen);
+        coordinatorPickerTrigger.setAttribute('aria-expanded', String(willOpen));
+    });
+    document.addEventListener('click', event => {
+        if (!coordinatorPicker?.contains(event.target)) {
+            coordinatorPickerPanel?.classList.add('hidden');
+            coordinatorPickerTrigger?.setAttribute('aria-expanded', 'false');
+        }
+    });
 
     document.getElementById('btn-show-add-user')?.addEventListener('click', async () => {
         await populateCoordSelect();
