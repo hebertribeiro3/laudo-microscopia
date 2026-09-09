@@ -103,5 +103,12 @@ service cloud.firestore {
       allow create: if active() && request.resource.data.userId == request.auth.uid;
       allow update, delete: if admin() || (active() && resource.data.userId == request.auth.uid);
     }
+
+    match /products/{productId} {
+      // Todos os usuários ativos precisam ler a lista para preencher o laudo.
+      allow read: if active();
+      // Somente o administrador pode cadastrar, editar ou desativar produtos.
+      allow create, update, delete: if admin();
+    }
   }
 }

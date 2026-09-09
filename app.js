@@ -126,6 +126,96 @@ document.addEventListener('DOMContentLoaded', () => {
         "Tec Isaria": { microrganismo: "Cordyceps fumosorosea", meio: "ISARIA" }
     };
 
+    // Lista inicial usada somente até o administrador migrá-la para o Firebase.
+    // Depois da migração, a coleção products passa a ser a fonte de dados para todos.
+    const DEFAULT_PRODUCTS = Object.entries(productDatabase).map(([name, data], index) => ({
+        id: `produto_inicial_${String(index + 1).padStart(2, '0')}`,
+        name,
+        microorganism: data.microrganismo,
+        cultureMedium: data.meio,
+        active: true
+    }));
+
+    function normalizeProduct(product) {
+        return {
+            id: product.id,
+            name: String(product.name || '').trim(),
+            microorganism: String(product.microorganism || product.microrganismo || '').trim(),
+            cultureMedium: String(product.cultureMedium || product.meio || '').trim(),
+            active: product.active !== false,
+            createdAt: product.createdAt || null,
+            updatedAt: product.updatedAt || null
+        };
+    }
+
+    function refreshProductDropdown(products) {
+        if (!selectProduto) return;
+        const currentValue = selectProduto.value;
+        const activeProducts = products
+            .map(normalizeProduct)
+            .filter(product => product.active && product.name)
+            .sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
+
+        Object.keys(productDatabase).forEach(key => delete productDatabase[key]);
+        activeProducts.forEach(product => {
+            productDatabase[product.name] = {
+                microrganismo: product.microorganism,
+                meio: product.cultureMedium
+            };
+        });
+
+        const options = ['<option value="" disabled selected>Selecione um Produto</option>'];
+        activeProducts.forEach(product => {
+            options.push(`<option value="${escapeHTML(product.name)}">${escapeHTML(product.name)}</option>`);
+        });
+        options.push('<option value="Outro">Outro...</option>');
+        selectProduto.innerHTML = options.join('');
+
+        if (currentValue && [...selectProduto.options].some(option => option.value === currentValue)) {
+            selectProduto.value = currentValue;
+        }
+    }
+
+    async function refreshProductsFromLocal() {
+        try {
+            const products = await LaudoDB.getProducts();
+            refreshProductDropdown(products.length ? products : DEFAULT_PRODUCTS);
+        } catch (error) {
+            console.warn('[Produtos] Não foi possível atualizar a lista local:', error);
+            refreshProductDropdown(DEFAULT_PRODUCTS);
+        }
+    }
+
+    async function getProductsForManagement() {
+        const localProducts = await LaudoDB.getProducts();
+        if (!dbFirebase) return localProducts;
+        const snapshot = await dbFirebase.collection('products').get();
+        const remoteProducts = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }));
+        for (const product of remoteProducts) await LaudoDB.putLocal('products', product);
+        return remoteProducts;
+    }
+
+    async function seedProductsIfNeeded() {
+        const user = AuthManager.getCurrentUser();
+        if (!AuthManager.isAdmin(user) || !dbFirebase) return false;
+
+        const existing = await dbFirebase.collection('products').limit(1).get();
+        if (!existing.empty) return false;
+
+        const now = new Date().toISOString();
+        const batch = dbFirebase.batch();
+        DEFAULT_PRODUCTS.forEach(product => {
+            batch.set(dbFirebase.collection('products').doc(product.id), {
+                ...product,
+                createdAt: now,
+                updatedAt: now,
+                createdBy: user.id
+            });
+        });
+        await batch.commit();
+        return true;
+    }
+
     // Clientes Padrão (extraídos do arquivo Dados.xlsx - exibidos apenas para Administradores)
     const DADOS_PREDEFINED_CLIENTS = [
         "Gilson Adriano Bomfim - Fazenda Sagrada Fámilia",
@@ -1150,7 +1240,9 @@ document.addEventListener('DOMContentLoaded', () => {
         'permanentlyDeleteLaudoFromRepository',
         'editUserFromTable',
         'deleteUserFromTable',
-        'openConsultantLaudos'
+        'openConsultantLaudos',
+        'editProductFromTable',
+        'toggleProductActive'
     ]);
 
     document.addEventListener('click', event => {
@@ -1349,6 +1441,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 <button type="button" class="user-action-btn" id="btn-open-users-bar" title="Gerenciar Usuários">
                     <i class="fa-solid fa-users-gear"></i> Usuários
                 </button>
+                <button type="button" class="user-action-btn" id="btn-open-products-bar" title="Gerenciar Produtos">
+                    <i class="fa-solid fa-boxes-stacked"></i> Produtos
+                </button>
             `;
         } else if (user.role === 'coordenador') {
             actionButtonsHTML += `
@@ -1401,6 +1496,18 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('btn-open-users-bar')?.addEventListener('click', () => {
             openModal('modal-users');
             renderUsersManagement();
+        });
+
+        document.getElementById('btn-open-products-bar')?.addEventListener('click', async () => {
+            try {
+                const seeded = await seedProductsIfNeeded();
+                if (seeded) showToast('Lista inicial de produtos enviada ao Firebase.', 'success');
+                await refreshProductsFromLocal();
+                openModal('modal-products');
+                await renderProductsManagement();
+            } catch (error) {
+                showToast('Não foi possível abrir Produtos: ' + (error.message || ''), 'error');
+            }
         });
 
         document.getElementById('btn-open-equipe-bar')?.addEventListener('click', () => {
@@ -1581,6 +1688,149 @@ document.addEventListener('DOMContentLoaded', () => {
             renderClientsManagement();
         });
     }
+
+    // ----------------------------------------------------
+    // Product Management (Administrator only)
+    // ----------------------------------------------------
+    async function renderProductsManagement() {
+        const tbody = document.getElementById('products-table-body');
+        const user = AuthManager.getCurrentUser();
+        if (!tbody || !AuthManager.isAdmin(user)) return;
+
+        const products = (await getProductsForManagement())
+            .map(normalizeProduct)
+            .sort((a, b) => {
+                if (a.active !== b.active) return a.active ? -1 : 1;
+                return a.name.localeCompare(b.name, 'pt-BR');
+            });
+
+        if (!products.length) {
+            tbody.innerHTML = `
+                <tr><td colspan="5" style="text-align:center; color:var(--text-muted); padding:20px;">
+                    Nenhum produto cadastrado ainda.
+                </td></tr>`;
+            return;
+        }
+
+        tbody.innerHTML = products.map(product => {
+            const status = product.active
+                ? '<span class="user-role-badge" style="background:#dcfce7;color:#166534;">Ativo</span>'
+                : '<span class="user-role-badge" style="background:#e2e8f0;color:#475569;">Desativado</span>';
+            const actionLabel = product.active ? 'Desativar' : 'Ativar';
+            const actionIcon = product.active ? 'fa-eye-slash' : 'fa-eye';
+            return `
+                <tr>
+                    <td><strong>${escapeHTML(product.name)}</strong></td>
+                    <td><em style="color:#004d20;">${escapeHTML(product.microorganism)}</em></td>
+                    <td>${escapeHTML(product.cultureMedium)}</td>
+                    <td>${status}</td>
+                    <td style="text-align:right;">
+                        <div class="table-actions" style="justify-content:flex-end;">
+                            <button type="button" class="btn-sm-action btn-view" data-app-action="editProductFromTable" data-id="${escapeHTML(product.id)}" title="Editar">
+                                <i class="fa-solid fa-pen"></i> Editar
+                            </button>
+                            <button type="button" class="btn-sm-action ${product.active ? 'btn-del' : 'btn-print-sm'}" data-app-action="toggleProductActive" data-id="${escapeHTML(product.id)}" title="${actionLabel}">
+                                <i class="fa-solid ${actionIcon}"></i> ${actionLabel}
+                            </button>
+                        </div>
+                    </td>
+                </tr>`;
+        }).join('');
+    }
+
+    window.editProductFromTable = async function(id) {
+        if (!AuthManager.isAdmin(AuthManager.getCurrentUser())) return;
+        const product = (await getProductsForManagement()).map(normalizeProduct).find(item => item.id === id);
+        if (!product) return;
+
+        document.getElementById('product-form-title').textContent = 'Editar Produto';
+        document.getElementById('product-edit-id').value = product.id;
+        document.getElementById('product-input-name').value = product.name;
+        document.getElementById('product-input-microorganism').value = product.microorganism;
+        document.getElementById('product-input-medium').value = product.cultureMedium;
+        document.getElementById('form-product-edit').classList.remove('hidden');
+    };
+
+    window.toggleProductActive = async function(id) {
+        const user = AuthManager.getCurrentUser();
+        if (!AuthManager.isAdmin(user)) return;
+        const product = (await getProductsForManagement()).map(normalizeProduct).find(item => item.id === id);
+        if (!product) return;
+
+        const nextActive = !product.active;
+        const verb = nextActive ? 'ativar' : 'desativar';
+        if (!confirm(`Deseja ${verb} o produto "${product.name}"?`)) return;
+
+        try {
+            await LaudoDB.saveProduct({
+                ...product,
+                active: nextActive,
+                updatedAt: new Date().toISOString(),
+                updatedBy: user.id
+            });
+            await refreshProductsFromLocal();
+            await renderProductsManagement();
+            showToast(`Produto ${nextActive ? 'ativado' : 'desativado'} com sucesso.`, 'success');
+        } catch (error) {
+            showToast('Não foi possível atualizar o produto: ' + (error.message || ''), 'error');
+        }
+    };
+
+    document.getElementById('btn-show-add-product')?.addEventListener('click', () => {
+        if (!AuthManager.isAdmin(AuthManager.getCurrentUser())) return;
+        document.getElementById('product-form-title').textContent = 'Cadastrar Produto';
+        document.getElementById('product-edit-id').value = '';
+        document.getElementById('product-input-name').value = '';
+        document.getElementById('product-input-microorganism').value = '';
+        document.getElementById('product-input-medium').value = 'BAC';
+        document.getElementById('form-product-edit').classList.remove('hidden');
+    });
+
+    document.getElementById('btn-cancel-product')?.addEventListener('click', () => {
+        document.getElementById('form-product-edit').classList.add('hidden');
+    });
+
+    document.getElementById('form-product-edit')?.addEventListener('submit', async event => {
+        event.preventDefault();
+        const user = AuthManager.getCurrentUser();
+        if (!AuthManager.isAdmin(user)) return;
+
+        const editId = document.getElementById('product-edit-id').value;
+        const name = document.getElementById('product-input-name').value.trim();
+        const microorganism = document.getElementById('product-input-microorganism').value.trim();
+        const cultureMedium = document.getElementById('product-input-medium').value;
+        const products = (await getProductsForManagement()).map(normalizeProduct);
+        const duplicate = products.find(product => product.id !== editId && product.name.toLocaleLowerCase('pt-BR') === name.toLocaleLowerCase('pt-BR'));
+
+        if (duplicate) {
+            showToast('Já existe um produto cadastrado com esse nome.', 'error');
+            return;
+        }
+
+        const existing = products.find(product => product.id === editId);
+        const now = new Date().toISOString();
+        const record = {
+            id: editId || `prd_${Date.now()}`,
+            name,
+            microorganism,
+            cultureMedium,
+            active: existing ? existing.active : true,
+            createdAt: existing?.createdAt || now,
+            createdBy: existing?.createdBy || user.id,
+            updatedAt: now,
+            updatedBy: user.id
+        };
+
+        try {
+            await LaudoDB.saveProduct(record);
+            document.getElementById('form-product-edit').classList.add('hidden');
+            await refreshProductsFromLocal();
+            await renderProductsManagement();
+            showToast(`Produto "${name}" salvo com sucesso.`, 'success');
+        } catch (error) {
+            showToast('Não foi possível salvar o produto: ' + (error.message || ''), 'error');
+        }
+    });
 
     // Dynamic Row Adder for Welcome Modal (Adicionar Mais Fazendas)
     let welcomeClientCounter = 1;
@@ -2219,17 +2469,23 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
         loadFromLocalStorage();
+        await refreshProductsFromLocal();
         if (user.mustChangePassword) openModal('modal-change-password');
         await FirebaseSync.syncPendingForUser(user);
     });
 
-    window.addEventListener('firebase-data-synced', () => {
+    window.addEventListener('firebase-data-synced', event => {
         if (document.getElementById('modal-laudos')?.classList.contains('active')) renderLaudosRepository();
         if (document.getElementById('modal-equipe')?.classList.contains('active')) renderTeamView();
+        if (event.detail?.storeName === 'products') {
+            refreshProductsFromLocal();
+            if (document.getElementById('modal-products')?.classList.contains('active')) renderProductsManagement();
+        }
     });
 
     // Initialize Application Auth & Session State
     clearFormForSignedOutUser();
+    refreshProductDropdown(DEFAULT_PRODUCTS);
     renderUserSessionBar();
     updateZoom();
 });

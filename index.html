@@ -847,6 +847,83 @@
         </div>
     </div>
 
+    <!-- MODAL: PRODUTOS (SOMENTE ADMINISTRADOR) -->
+    <div class="modal-overlay" id="modal-products">
+        <div class="modal-card modal-lg">
+            <div class="modal-header">
+                <div class="modal-title">
+                    <i class="fa-solid fa-boxes-stacked"></i> Produtos
+                </div>
+                <button type="button" class="modal-close" data-close="modal-products">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 16px;">
+                    <p style="font-size: 13px; color: var(--text-secondary); margin: 0;">
+                        Cadastre e mantenha a lista usada no preenchimento automático dos laudos.
+                    </p>
+                    <button type="button" class="btn-primary" id="btn-show-add-product">
+                        <i class="fa-solid fa-plus"></i> Novo Produto
+                    </button>
+                </div>
+
+                <form id="form-product-edit" class="hidden mb-4" style="background: #f8fafc; padding: 16px; border-radius: 10px; border: 1px solid var(--border-color);">
+                    <h4 id="product-form-title" style="font-size: 14px; margin-bottom: 12px; color: var(--solubio-dark);">Cadastrar Produto</h4>
+                    <input type="hidden" id="product-edit-id">
+                    <div class="form-grid">
+                        <div class="form-group col-6">
+                            <label for="product-input-name">Nome do Produto</label>
+                            <input type="text" id="product-input-name" required maxlength="100" placeholder="Ex: Bio Novo">
+                        </div>
+                        <div class="form-group col-6">
+                            <label for="product-input-microorganism">Microrganismo</label>
+                            <input type="text" id="product-input-microorganism" required maxlength="140" placeholder="Ex: Bacillus subtilis">
+                        </div>
+                        <div class="form-group col-6">
+                            <label for="product-input-medium">Meio de Cultura</label>
+                            <select id="product-input-medium" required>
+                                <option value="BAC">BAC</option>
+                                <option value="SM">SM</option>
+                                <option value="SH">SH</option>
+                                <option value="BUG">BUG</option>
+                                <option value="CATP">CATP</option>
+                                <option value="FINISH">FINISH</option>
+                                <option value="WHITE">WHITE</option>
+                                <option value="RZB">RZB</option>
+                                <option value="AZ">AZ</option>
+                                <option value="ISARIA">ISARIA</option>
+                                <option value="Não se aplica">N/A</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 12px;">
+                        <button type="button" class="btn-secondary" id="btn-cancel-product">Cancelar</button>
+                        <button type="submit" class="btn-primary"><i class="fa-solid fa-check"></i> Salvar Produto</button>
+                    </div>
+                </form>
+
+                <div style="overflow-x: auto;">
+                    <table class="app-table">
+                        <thead>
+                            <tr>
+                                <th>Produto</th>
+                                <th>Microrganismo</th>
+                                <th>Meio</th>
+                                <th>Status</th>
+                                <th style="text-align: right;">Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="products-table-body">
+                            <!-- Preenchido via JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-secondary" data-close="modal-products">Fechar</button>
+            </div>
+        </div>
+    </div>
+
     <!-- MODAL 4: MINHA EQUIPE (COORDENADOR) -->
     <div class="modal-overlay" id="modal-equipe">
         <div class="modal-card modal-lg">
@@ -1035,7 +1112,7 @@
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
 
     <!-- Scripts da Aplicação -->
-    <script src="auth-store.js?v=6"></script>
-    <script src="app.js?v=19"></script>
+    <script src="auth-store.js?v=7"></script>
+    <script src="app.js?v=20"></script>
 </body>
 </html>

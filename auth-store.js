@@ -5,7 +5,7 @@
 
 const LaudoDB = (function () {
     const DB_NAME = 'SolubioLaudosDB_v8';
-    const DB_VERSION = 1;
+    const DB_VERSION = 2;
     let dbInstance = null;
 
 
@@ -28,6 +28,9 @@ const LaudoDB = (function () {
                 if (!db.objectStoreNames.contains('clients')) {
                     const clientStore = db.createObjectStore('clients', { keyPath: 'id' });
                     clientStore.createIndex('userId', 'userId', { unique: false });
+                }
+                if (!db.objectStoreNames.contains('products')) {
+                    db.createObjectStore('products', { keyPath: 'id' });
                 }
             };
 
@@ -92,6 +95,7 @@ const LaudoDB = (function () {
         getUsersLocal: () => getAll('users'),
         getLaudosLocal: () => getAll('laudos'),
         getClientsLocal: () => getAll('clients'),
+        getProductsLocal: () => getAll('products'),
         putLocal: (storeName, item) => put(storeName, item),
         removeLocal: (storeName, id) => remove(storeName, id),
 
@@ -203,6 +207,15 @@ const LaudoDB = (function () {
         deleteClient: async (id) => {
             await FirebaseSync.removeItem('clients', id);
             return await remove('clients', id);
+        },
+        getProducts: async () => {
+            return await getAll('products');
+        },
+        saveProduct: async (product) => {
+            const user = typeof AuthManager !== 'undefined' ? AuthManager.getCurrentUser() : null;
+            if (!AuthManager.isAdmin(user)) throw new Error('Somente o administrador pode alterar produtos.');
+            await FirebaseSync.pushItem('products', product);
+            return await put('products', product);
         }
     };
 })();
@@ -249,6 +262,7 @@ const FirebaseSync = (function () {
         if (storeName === 'users') return await LaudoDB.getUsersLocal();
         if (storeName === 'laudos') return await LaudoDB.getLaudosLocal();
         if (storeName === 'clients') return await LaudoDB.getClientsLocal();
+        if (storeName === 'products') return await LaudoDB.getProductsLocal();
         return [];
     }
 
@@ -292,6 +306,7 @@ const FirebaseSync = (function () {
             listen(dbFirebase.collection('users'), 'users', () => true);
             listen(dbFirebase.collection('laudos'), 'laudos', () => true);
             listen(dbFirebase.collection('clients'), 'clients', () => true);
+            listen(dbFirebase.collection('products'), 'products', () => true);
         } else if (user.role === 'coordenador') {
             listen(dbFirebase.collection('users').where('coordinatorIds', 'array-contains', user.id), 'users', item => Array.isArray(item.coordinatorIds) && item.coordinatorIds.includes(user.id));
             listen(dbFirebase.collection('users').where('coordinatorId', '==', user.id), 'users', item => !Array.isArray(item.coordinatorIds) && item.coordinatorId === user.id);
@@ -300,10 +315,12 @@ const FirebaseSync = (function () {
             listen(dbFirebase.collection('laudos').where('coordinatorId', '==', user.id), 'laudos', item => !Array.isArray(item.coordinatorIds) && item.coordinatorId === user.id);
             listen(dbFirebase.collection('laudos').where('authorId', '==', user.id), 'laudos', item => item.authorId === user.id);
             listen(dbFirebase.collection('clients').where('userId', '==', user.id), 'clients', item => item.userId === user.id);
+            listen(dbFirebase.collection('products').where('active', '==', true), 'products', item => item.active !== false);
         } else {
             listen(dbFirebase.collection('users').where(firebase.firestore.FieldPath.documentId(), '==', user.id), 'users', item => item.id === user.id);
             listen(dbFirebase.collection('laudos').where('authorId', '==', user.id), 'laudos', item => item.authorId === user.id);
             listen(dbFirebase.collection('clients').where('userId', '==', user.id), 'clients', item => item.userId === user.id);
+            listen(dbFirebase.collection('products').where('active', '==', true), 'products', item => item.active !== false);
         }
     }
 
